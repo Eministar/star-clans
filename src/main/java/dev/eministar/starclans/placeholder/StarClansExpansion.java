@@ -54,6 +54,17 @@ public final class StarClansExpansion extends PlaceholderExpansion {
 
         return switch (key) {
             case "name" -> p != null && p.inClan ? p.clanName : clanNameFallback(player.getUniqueId());
+            case "name_formatted" -> {
+                if (p != null && p.inClan) {
+                    yield "§b" + p.clanName + " §8(" + "§f" + p.memberCount + "§8)";
+                }
+                long clanId = clanIdFallback(player.getUniqueId());
+                if (clanId <= 0) yield "(-)";
+                String name = clanNameFallback(player.getUniqueId());
+                if (name.isEmpty()) yield "(-)";
+                int members = memberCountFallback(clanId);
+                yield "§b" + name + " §8(" + "§f" + members + "§8)";
+            }
             case "tag" -> p != null && p.inClan ? p.clanTag : clanTagFallback(player.getUniqueId());
             case "role" -> p != null && p.inClan ? prettyRole(p.role.name()) : "";
             case "members" -> p != null && p.inClan ? String.valueOf(p.memberCount) : "0";
@@ -68,6 +79,19 @@ public final class StarClansExpansion extends PlaceholderExpansion {
                 String tag = clanTagFallback(player.getUniqueId());
                 if (tag.isEmpty()) yield "";
                 yield clanSuffix(clanId, tag);
+            }
+            case "formatted_suffix" -> {
+                String suffix;
+                if (p != null && p.inClan) {
+                    suffix = clanSuffix(p.clanId, p.clanTag);
+                } else {
+                    long clanId = clanIdFallback(player.getUniqueId());
+                    if (clanId <= 0) yield "";
+                    String tag = clanTagFallback(player.getUniqueId());
+                    if (tag.isEmpty()) yield "";
+                    suffix = clanSuffix(clanId, tag);
+                }
+                yield suffix.isEmpty() ? "" : " " + suffix;
             }
             default -> "";
         };
@@ -110,6 +134,14 @@ public final class StarClansExpansion extends PlaceholderExpansion {
             return repo.getClanNameTag(clanId)[1];
         } catch (Exception e) {
             return "";
+        }
+    }
+
+    private int memberCountFallback(long clanId) {
+        try {
+            return repo.countMembers(clanId);
+        } catch (Exception e) {
+            return 0;
         }
     }
 
