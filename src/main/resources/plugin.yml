@@ -1,0 +1,21 @@
+name: StarClans
+version: '${project.version}'
+main: dev.eministar.starclans.StarClans
+api-version: '1.21'
+authors: [ Eministar ]
+description: The Ultimate Clan System for stars!
+website: https://star-dev.xyz
+softdepend:
+  - PlaceholderAPI
+commands:
+  clan:
+    description: Opens the StarClans menu
+    usage: /clan
+    aliases: [clans]
+  starclans:
+    description: StarClans admin command
+    usage: /starclans reload
+    aliases: [ sc ]
+permissions:
+  starclans.admin.reload:
+    default: op

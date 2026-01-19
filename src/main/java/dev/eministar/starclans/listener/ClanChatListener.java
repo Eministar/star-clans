@@ -1,4 +1,4 @@
-package dev.eministar.starclans.license;
+package dev.eministar.starclans.listener;
 
 import dev.eministar.starclans.StarClans;
 import dev.eministar.starclans.database.ClanRepository;

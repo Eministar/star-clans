@@ -1,4 +1,7 @@
 package dev.eministar.starclans.model;
 
-public class MemberRole {
+public enum MemberRole {
+    LEADER,
+    OFFICER,
+    MEMBER
 }

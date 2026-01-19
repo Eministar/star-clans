@@ -1,0 +1,21 @@
+database:
+  enabled: true
+  host: "127.0.0.1"
+  port: 3306
+  name: "starclans"
+  username: "root"
+  password: "password"
+  pool:
+    maxPoolSize: 10
+    minIdle: 2
+    connectionTimeoutMs: 10000
+    idleTimeoutMs: 600000
+    maxLifetimeMs: 1800000
+
+clan:
+  creation:
+    cost: 25000.0
+    minNameLen: 3
+    maxNameLen: 16
+    minTagLen: 2
+    maxTagLen: 5
