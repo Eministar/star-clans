@@ -45,8 +45,14 @@ public final class ClanCreateMenu implements Listener {
     }
 
     public void open(Player p) {
-        state.put(p.getUniqueId(), new ClanService.CreateState());
-        openView(p);
+        service.loadProfileAsync(p.getUniqueId(), prof -> {
+            if (prof != null && prof.inClan) {
+                p.sendMessage(StarPrefix.PREFIX + "§cDu bist bereits in einem Clan.");
+                return;
+            }
+            state.put(p.getUniqueId(), new ClanService.CreateState());
+            openView(p);
+        });
     }
 
     private void openView(Player p) {

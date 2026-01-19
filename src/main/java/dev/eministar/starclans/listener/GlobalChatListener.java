@@ -32,6 +32,7 @@ public final class GlobalChatListener implements Listener {
 
     @EventHandler(priority = EventPriority.HIGHEST)
     public void onChat(AsyncPlayerChatEvent e) {
+        if (e.isCancelled()) return;
         Player p = e.getPlayer();
         ClanProfile prof = service.getCached(p.getUniqueId());
 
@@ -43,16 +44,17 @@ public final class GlobalChatListener implements Listener {
                 try {
                     ClanRepository.ClanCosmeticsRow cos = repo.getCosmetics(prof.clanId);
                     String tagStyle = cos.tagStyle.isEmpty() ? "§b" : cos.tagStyle;
-                    String tag = "§8[§r" + tagStyle + prof.clanTag + "§8]§r ";
+                    String suffix = " §8[§r" + tagStyle + prof.clanTag + "§8]§r";
                     MemberRole role = prof.role == null ? MemberRole.MEMBER : prof.role;
                     String hover = "§7Rang: " + roleColor(role) + role.name();
 
-                    TextComponent prefix = new TextComponent("§d§lC §8| " + tag + "§f");
+                    TextComponent prefix = new TextComponent("§d§lC §8| §f");
                     TextComponent name = new TextComponent(p.getName());
                     name.setHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, new ComponentBuilder(hover).create()));
-                    name.setClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, "/clan manage " + p.getName()));
+                    name.setClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, "/clan members " + p.getName()));
+                    TextComponent suffixComp = new TextComponent(suffix);
                     TextComponent rest = new TextComponent(" §8» §d" + msg);
-                    BaseComponent[] out = new BaseComponent[]{prefix, name, rest};
+                    BaseComponent[] out = new BaseComponent[]{prefix, name, suffixComp, rest};
 
                     java.util.List<ClanRepository.MemberRow> members = repo.listMembers(prof.clanId);
                     Bukkit.getScheduler().runTask(plugin, () -> {
@@ -81,12 +83,9 @@ public final class GlobalChatListener implements Listener {
                 ClanRepository.ClanCosmeticsRow cos = repo.getCosmetics(prof.clanId);
 
                 String tagStyle = cos.tagStyle.isEmpty() ? "§b" : cos.tagStyle;
-                String tag = "§8[§r" + tagStyle + prof.clanTag + "§8]§r ";
+                String suffix = " §8[§r" + tagStyle + prof.clanTag + "§8]§r";
 
-                String suffix = "";
-                if (!cos.chatSuffix.isEmpty()) suffix = " §8" + cos.chatSuffix + "§r";
-
-                String format = tag + "§f%1$s" + suffix + " §8» §7%2$s";
+                String format = "§f%1$s" + suffix + " §8» §7%2$s";
                 Bukkit.getScheduler().runTask(plugin, () -> e.setFormat(format));
             } catch (Exception ex) {
                 ex.printStackTrace();

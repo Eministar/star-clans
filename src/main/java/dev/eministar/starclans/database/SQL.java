@@ -49,6 +49,8 @@ public final class SQL {
                         clan_id BIGINT NOT NULL,
                         target_uuid CHAR(36) NOT NULL,
                         inviter_uuid CHAR(36) NOT NULL,
+                        requires_approval TINYINT(1) NOT NULL DEFAULT 0,
+                        pending_approval TINYINT(1) NOT NULL DEFAULT 0,
                         created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
                         expires_at TIMESTAMP NOT NULL,
                         KEY idx_inv_target (target_uuid),
@@ -111,6 +113,8 @@ public final class SQL {
             ensureIndex(con, "clan_members", "idx_members_clan", "clan_id");
 
             ensureColumn(con, "clan_invites", "created_at", "TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP");
+            ensureColumn(con, "clan_invites", "requires_approval", "TINYINT(1) NOT NULL DEFAULT 0");
+            ensureColumn(con, "clan_invites", "pending_approval", "TINYINT(1) NOT NULL DEFAULT 0");
             ensureIndex(con, "clan_invites", "idx_inv_target", "target_uuid");
             ensureIndex(con, "clan_invites", "idx_inv_clan", "clan_id");
 

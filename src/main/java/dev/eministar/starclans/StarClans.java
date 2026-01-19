@@ -77,7 +77,7 @@ public final class StarClans extends JavaPlugin {
         );
 
         if (Bukkit.getPluginManager().getPlugin("PlaceholderAPI") != null) {
-            new StarClansExpansion(this, service).register();
+            new StarClansExpansion(this, service, repo).register();
             getLogger().info("PlaceholderAPI expansion registered.");
         } else {
             getLogger().warning("PlaceholderAPI not found. Placeholders disabled.");

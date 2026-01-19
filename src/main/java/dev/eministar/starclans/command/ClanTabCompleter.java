@@ -25,7 +25,7 @@ public final class ClanTabCompleter implements TabCompleter {
 
         if (args.length == 2) {
             String sub = args[0].toLowerCase();
-            if (sub.equals("invite") || sub.equals("kick") || sub.equals("promote") || sub.equals("demote") || sub.equals("manage")) {
+            if (sub.equals("invite") || sub.equals("kick") || sub.equals("promote") || sub.equals("demote") || sub.equals("members")) {
                 List<String> names = new ArrayList<>();
                 for (Player p : Bukkit.getOnlinePlayers()) names.add(p.getName());
                 return filter(names, args[1]);

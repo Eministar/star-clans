@@ -25,7 +25,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 public final class ClanSettingsMenu implements Listener {
 
-    private static final String TITLE = "§b§lClan §8| §fSettings";
+    private static final String TITLE = "§b§lClan §8| §fManage";
 
     private final StarClans plugin;
     private final ClanService service;
@@ -50,6 +50,10 @@ public final class ClanSettingsMenu implements Listener {
                     return;
                 }
                 MemberRole role = repo.getRole(p.getUniqueId());
+                if (role != MemberRole.LEADER) {
+                    Bukkit.getScheduler().runTask(plugin, () -> p.sendMessage(StarPrefix.PREFIX + "§cNur der Leader kann Clan-Manage öffnen."));
+                    return;
+                }
                 ClanRepository.ClanSettingsRow s = repo.getSettings(clanId);
                 Bukkit.getScheduler().runTask(plugin, () -> openInv(p, role, s));
             } catch (Exception e) {
@@ -68,9 +72,13 @@ public final class ClanSettingsMenu implements Listener {
 
         boolean can = role != MemberRole.MEMBER;
 
+        inv.setItem(11, tagStyler());
         inv.setItem(13, can ? motd(s.motd) : locked("§cKeine Rechte"));
+        inv.setItem(15, disband());
+
         inv.setItem(21, can ? toggle("§bOpen Invite", s.openInvite) : locked("§cKeine Rechte"));
-        inv.setItem(23, can ? toggle("§cFriendly Fire", s.friendlyFire) : locked("§cKeine Rechte"));
+        inv.setItem(23, members());
+        inv.setItem(31, invites());
 
         p.openInventory(inv);
         p.playSound(p.getLocation(), Sound.UI_BUTTON_CLICK, 0.7f, 1.4f);
@@ -93,11 +101,25 @@ public final class ClanSettingsMenu implements Listener {
             return;
         }
 
+        if (slot == 11) {
+            p.closeInventory();
+            p.performCommand("clan tagstyler");
+            p.playSound(p.getLocation(), Sound.UI_BUTTON_CLICK, 0.8f, 1.6f);
+            return;
+        }
+
         if (slot == 13) {
             motdEdit.add(p.getUniqueId());
             p.closeInventory();
             p.sendMessage(StarPrefix.PREFIX + "§7Schreib neue MOTD in den Chat. §8(§fcancel§8 zum Abbrechen)");
             p.playSound(p.getLocation(), Sound.UI_BUTTON_CLICK, 0.8f, 1.6f);
+            return;
+        }
+
+        if (slot == 15) {
+            p.closeInventory();
+            p.performCommand("clan disband");
+            p.playSound(p.getLocation(), Sound.ENTITY_WITHER_DEATH, 0.7f, 1.0f);
             return;
         }
 
@@ -111,10 +133,15 @@ public final class ClanSettingsMenu implements Listener {
         }
 
         if (slot == 23) {
-            service.toggleFriendlyFire(p, s -> {
-                p.sendMessage(StarPrefix.PREFIX + s);
-                open(p);
-            });
+            p.closeInventory();
+            p.performCommand("clan members");
+            p.playSound(p.getLocation(), Sound.UI_BUTTON_CLICK, 0.8f, 1.6f);
+            return;
+        }
+
+        if (slot == 31) {
+            p.closeInventory();
+            p.performCommand("clan invites");
             p.playSound(p.getLocation(), Sound.UI_BUTTON_CLICK, 0.8f, 1.6f);
         }
     }
@@ -197,6 +224,70 @@ public final class ClanSettingsMenu implements Listener {
         ItemMeta meta = it.getItemMeta();
         if (meta != null) {
             meta.setDisplayName("§cZurück");
+            it.setItemMeta(meta);
+        }
+        return it;
+    }
+
+    private ItemStack tagStyler() {
+        ItemStack it = new ItemStack(Material.NETHER_STAR);
+        ItemMeta meta = it.getItemMeta();
+        if (meta != null) {
+            meta.setDisplayName("§dTag Styler");
+            meta.setLore(Arrays.asList(
+                    "§8",
+                    "§7Tag-Farben & Style",
+                    "§8",
+                    "§bKlick §7zum Öffnen"
+            ));
+            it.setItemMeta(meta);
+        }
+        return it;
+    }
+
+    private ItemStack members() {
+        ItemStack it = new ItemStack(Material.PLAYER_HEAD);
+        ItemMeta meta = it.getItemMeta();
+        if (meta != null) {
+            meta.setDisplayName("§bMitglieder");
+            meta.setLore(Arrays.asList(
+                    "§8",
+                    "§7Mitglieder verwalten",
+                    "§8",
+                    "§bKlick §7zum Öffnen"
+            ));
+            it.setItemMeta(meta);
+        }
+        return it;
+    }
+
+    private ItemStack invites() {
+        ItemStack it = new ItemStack(Material.PAPER);
+        ItemMeta meta = it.getItemMeta();
+        if (meta != null) {
+            meta.setDisplayName("§eEinladungen");
+            meta.setLore(Arrays.asList(
+                    "§8",
+                    "§7Anfragen annehmen/ablehnen",
+                    "§8",
+                    "§bKlick §7zum Öffnen"
+            ));
+            it.setItemMeta(meta);
+        }
+        return it;
+    }
+
+    private ItemStack disband() {
+        ItemStack it = new ItemStack(Material.TNT);
+        ItemMeta meta = it.getItemMeta();
+        if (meta != null) {
+            meta.setDisplayName("§cClan löschen");
+            meta.setLore(Arrays.asList(
+                    "§8",
+                    "§7Löscht den Clan dauerhaft",
+                    "§8",
+                    "§cKlick §7zum Auflösen"
+            ));
             it.setItemMeta(meta);
         }
         return it;

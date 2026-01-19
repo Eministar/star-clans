@@ -57,8 +57,7 @@ public final class ClanCommand implements CommandExecutor {
         switch (sub) {
             case "create" -> createMenu.open(p);
             case "invites" -> invitesMenu.open(p);
-            case "members" -> membersMenu.open(p);
-            case "manage" -> {
+            case "members" -> {
                 if (args.length < 2) {
                     membersMenu.open(p);
                     return true;
@@ -70,6 +69,17 @@ public final class ClanCommand implements CommandExecutor {
                 }
                 manageMenu.open(p, t.getUniqueId());
             }
+            case "manage" -> service.loadProfileAsync(p.getUniqueId(), prof -> {
+                if (prof == null || !prof.inClan) {
+                    p.sendMessage(StarPrefix.PREFIX + "§cDu bist in keinem Clan.");
+                    return;
+                }
+                if (prof.role != dev.eministar.starclans.model.MemberRole.LEADER) {
+                    p.sendMessage(StarPrefix.PREFIX + "§cNur der Leader kann Clan-Manage öffnen.");
+                    return;
+                }
+                settingsMenu.open(p);
+            });
             case "settings" -> settingsMenu.open(p);
             case "tagstyler", "tagstyle", "styler" -> tagStyleMenu.open(p);
 
@@ -159,9 +169,30 @@ public final class ClanCommand implements CommandExecutor {
                 service.demote(p, t.getUniqueId(), s -> p.sendMessage(StarPrefix.PREFIX + s));
             }
 
-            default -> p.sendMessage(StarPrefix.PREFIX + "§7Subcommands: §fcreate, invites, members, manage, settings, tagstyler, invite, accept, deny, chat, leave, disband, kick, promote, demote");
+            default -> sendHelp(p);
         }
 
         return true;
+    }
+
+    private void sendHelp(Player p) {
+        p.sendMessage(StarPrefix.PREFIX + "§e§lClan Hilfe");
+        p.sendMessage("§8• §f/clan §7- Hauptmenü öffnen");
+        p.sendMessage("§8• §f/clan create §7- Clan erstellen");
+        p.sendMessage("§8• §f/clan invites §7- Einladungen/Anfragen ansehen");
+        p.sendMessage("§8• §f/clan invite <Spieler> §7- Spieler einladen");
+        p.sendMessage("§8• §f/clan accept <id> §7- Einladung/Anfrage annehmen");
+        p.sendMessage("§8• §f/clan deny <id> §7- Einladung/Anfrage ablehnen");
+        p.sendMessage("§8• §f/clan members §7- Mitgliederliste oeffnen");
+        p.sendMessage("§8• §f/clan members <Spieler> §7- Member verwalten");
+        p.sendMessage("§8• §f/clan manage §7- Clan-Manage GUI (Leader)");
+        p.sendMessage("§8• §f/clan settings §7- Einstellungen oeffnen");
+        p.sendMessage("§8• §f/clan tagstyler §7- Tag/Suffix stylen");
+        p.sendMessage("§8• §f/clan chat §7- Clan-Chat togglen");
+        p.sendMessage("§8• §f/clan kick <Spieler> §7- Member kicken");
+        p.sendMessage("§8• §f/clan promote <Spieler> §7- Member befoerdern");
+        p.sendMessage("§8• §f/clan demote <Spieler> §7- Member demoten");
+        p.sendMessage("§8• §f/clan leave §7- Clan verlassen");
+        p.sendMessage("§8• §f/clan disband §7- Clan loeschen (Leader)");
     }
 }

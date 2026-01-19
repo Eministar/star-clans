@@ -60,7 +60,7 @@ public final class ClanMainMenu implements Listener {
             else if (ecoOk) costLine = "§8• §fKosten: §6" + ClanService.moneyStatic(cost);
             else costLine = "§8• §fKosten: §cVault/Eco fehlt!";
 
-            inv.setItem(20, button(Material.EMERALD, "§a§lClan erstellen",
+            inv.setItem(22, button(Material.EMERALD, "§a§lClan erstellen",
                     Arrays.asList("§7Erstelle deinen eigenen Clan", "", costLine, "", "§7Klick zum Starten"),
                     "CREATE", true));
 
@@ -72,12 +72,12 @@ public final class ClanMainMenu implements Listener {
             inv.setItem(49, button(Material.BARRIER, "§c§lSchließen", Arrays.asList("§7Menü schließen"), "CLOSE", false));
 
         } else {
-            inv.setItem(20, button(Material.NETHER_STAR, "§b§lMein Clan",
+            inv.setItem(22, button(Material.NETHER_STAR, "§b§lMein Clan",
                     Arrays.asList("§7Name: §f" + profile.clanName, "§7Tag: §b" + profile.clanTag, "§7Rolle: §f" + profile.role.name(),
                             "§7Mitglieder: §f" + profile.memberCount, "", "§7Klick für Clan-Manage"),
                     "MANAGE", true));
 
-            inv.setItem(22, button(Material.PLAYER_HEAD, "§d§lMitglieder",
+            inv.setItem(20, button(Material.PLAYER_HEAD, "§d§lMitglieder",
                     Arrays.asList("§7Mitglieder anzeigen", "§7und Rollen später verwalten", "", "§7Klick zum Öffnen"),
                     "MEMBERS", false));
 
@@ -87,7 +87,7 @@ public final class ClanMainMenu implements Listener {
                     "INVITES", profile.inviteCount > 0));
 
             boolean chatOn = service.isClanChat(player.getUniqueId());
-            inv.setItem(40, button(Material.OAK_SIGN, chatOn ? "§a§lClan Chat: AN" : "§c§lClan Chat: AUS",
+            inv.setItem(31, button(Material.OAK_SIGN, chatOn ? "§a§lClan Chat: AN" : "§c§lClan Chat: AUS",
                     Arrays.asList("§7Toggle Clan-Chat Modus", "", "§7Klick zum Umschalten"),
                     "CHAT_TOGGLE", chatOn));
 

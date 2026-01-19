@@ -14,12 +14,22 @@ public final class ClanRepository {
         public final long clanId;
         public final String clanName;
         public final String clanTag;
+        public final UUID targetUuid;
+        public final UUID inviterUuid;
+        public final boolean requiresApproval;
+        public final boolean pendingApproval;
 
-        public InviteRow(long id, long clanId, String clanName, String clanTag) {
+        public InviteRow(long id, long clanId, String clanName, String clanTag,
+                         UUID targetUuid, UUID inviterUuid,
+                         boolean requiresApproval, boolean pendingApproval) {
             this.id = id;
             this.clanId = clanId;
             this.clanName = clanName;
             this.clanTag = clanTag;
+            this.targetUuid = targetUuid;
+            this.inviterUuid = inviterUuid;
+            this.requiresApproval = requiresApproval;
+            this.pendingApproval = pendingApproval;
         }
     }
 
@@ -84,6 +94,8 @@ public final class ClanRepository {
     private String cInviteClanId;
     private String cInviteTargetUuid;
     private String cInviteInviterUuid;
+    private String cInviteRequiresApproval;
+    private String cInvitePendingApproval;
     private String cInviteExpiresAt;
     private String cInviteCreatedAt;
 
@@ -132,6 +144,8 @@ public final class ClanRepository {
             cInviteClanId = pick(invitesCols, "clan_id", "clanId");
             cInviteTargetUuid = pick(invitesCols, "target_uuid", "uuid", "member_uuid", "player_uuid", "user_uuid", "target");
             cInviteInviterUuid = pick(invitesCols, "inviter_uuid", "sender_uuid", "from_uuid", "inviter", "sender");
+            cInviteRequiresApproval = pick(invitesCols, "requires_approval", "requiresApproval", "needs_approval", "needsApproval");
+            cInvitePendingApproval = pick(invitesCols, "pending_approval", "pendingApproval", "approval_pending", "approvalPending");
             cInviteExpiresAt = pick(invitesCols, "expires_at", "expire_at", "expires", "expire");
             cInviteCreatedAt = pick(invitesCols, "created_at", "created", "time", "createdAt");
 
@@ -163,6 +177,8 @@ public final class ClanRepository {
             require(tInvites, cInviteClanId, "clan_id");
             require(tInvites, cInviteTargetUuid, "target_uuid/uuid");
             require(tInvites, cInviteInviterUuid, "inviter_uuid/sender_uuid");
+            require(tInvites, cInviteRequiresApproval, "requires_approval");
+            require(tInvites, cInvitePendingApproval, "pending_approval");
             require(tInvites, cInviteExpiresAt, "expires_at");
 
             require(tSettings, cSettingsClanId, "clan_id");
@@ -489,34 +505,91 @@ public final class ClanRepository {
         }
     }
 
-    public void createInvite(long clanId, UUID target, UUID inviter, int minutes) throws Exception {
+    public long createInvite(long clanId, UUID target, UUID inviter, int minutes) throws Exception {
+        return createInvite(clanId, target, inviter, minutes, false);
+    }
+
+    public long createInvite(long clanId, UUID target, UUID inviter, int minutes, boolean requiresApproval) throws Exception {
         ensureResolved();
         cleanupExpiredInvites();
         int m = Math.max(1, minutes);
-        String sql = "INSERT INTO " + q(tInvites) + " (" + q(cInviteClanId) + "," + q(cInviteTargetUuid) + "," + q(cInviteInviterUuid) + "," + q(cInviteExpiresAt) + ") VALUES (?,?,?,DATE_ADD(NOW(), INTERVAL ? MINUTE))";
+        String sql = "INSERT INTO " + q(tInvites) + " (" + q(cInviteClanId) + "," + q(cInviteTargetUuid) + "," + q(cInviteInviterUuid) + "," + q(cInviteRequiresApproval) + "," + q(cInvitePendingApproval) + "," + q(cInviteExpiresAt) + ") VALUES (?,?,?,?,?,DATE_ADD(NOW(), INTERVAL ? MINUTE))";
         try (Connection con = c();
-             PreparedStatement ps = con.prepareStatement(sql)) {
+             PreparedStatement ps = con.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
             ps.setLong(1, clanId);
             ps.setString(2, target.toString());
             ps.setString(3, inviter.toString());
-            ps.setInt(4, m);
+            ps.setBoolean(4, requiresApproval);
+            ps.setBoolean(5, false);
+            ps.setInt(6, m);
             ps.executeUpdate();
+            try (ResultSet rs = ps.getGeneratedKeys()) {
+                if (rs.next()) return rs.getLong(1);
+            }
+        }
+        return -1;
+    }
+
+    public String getMemberName(UUID member) throws Exception {
+        ensureResolved();
+        String sql = "SELECT " + q(cMemberName) + " FROM " + q(tMembers) + " WHERE " + q(cMemberUuid) + "=? LIMIT 1";
+        try (Connection con = c();
+             PreparedStatement ps = con.prepareStatement(sql)) {
+            ps.setString(1, member.toString());
+            try (ResultSet rs = ps.executeQuery()) {
+                if (!rs.next()) return "Unknown";
+                String n = rs.getString(1);
+                return n == null || n.isEmpty() ? "Unknown" : n;
+            }
         }
     }
 
     public InviteRow getInviteById(long inviteId, UUID target) throws Exception {
+        return getInviteForTarget(inviteId, target);
+    }
+
+    public InviteRow getInviteForTarget(long inviteId, UUID target) throws Exception {
         ensureResolved();
         cleanupExpiredInvites();
         String sql = "SELECT i." + q(cInviteId) + ", i." + q(cInviteClanId) + ", c." + q(cClanName) + ", c." + q(cClanTag) +
+                ", i." + q(cInviteTargetUuid) + ", i." + q(cInviteInviterUuid) +
+                ", i." + q(cInviteRequiresApproval) + ", i." + q(cInvitePendingApproval) +
                 " FROM " + q(tInvites) + " i JOIN " + q(tClans) + " c ON c." + q(cClanIdClans) + " = i." + q(cInviteClanId) +
-                " WHERE i." + q(cInviteId) + "=? AND i." + q(cInviteTargetUuid) + "=? AND i." + q(cInviteExpiresAt) + " >= NOW() LIMIT 1";
+                " WHERE i." + q(cInviteId) + "=? AND i." + q(cInviteTargetUuid) + "=? AND i." + q(cInvitePendingApproval) + "=0 AND i." + q(cInviteExpiresAt) + " >= NOW() LIMIT 1";
         try (Connection con = c();
              PreparedStatement ps = con.prepareStatement(sql)) {
             ps.setLong(1, inviteId);
             ps.setString(2, target.toString());
             try (ResultSet rs = ps.executeQuery()) {
                 if (!rs.next()) return null;
-                return new InviteRow(rs.getLong(1), rs.getLong(2), rs.getString(3), rs.getString(4));
+                return new InviteRow(
+                        rs.getLong(1), rs.getLong(2), rs.getString(3), rs.getString(4),
+                        UUID.fromString(rs.getString(5)), UUID.fromString(rs.getString(6)),
+                        readBool(rs, cInviteRequiresApproval), readBool(rs, cInvitePendingApproval)
+                );
+            }
+        }
+    }
+
+    public InviteRow getInviteForApproval(long inviteId, long clanId) throws Exception {
+        ensureResolved();
+        cleanupExpiredInvites();
+        String sql = "SELECT i." + q(cInviteId) + ", i." + q(cInviteClanId) + ", c." + q(cClanName) + ", c." + q(cClanTag) +
+                ", i." + q(cInviteTargetUuid) + ", i." + q(cInviteInviterUuid) +
+                ", i." + q(cInviteRequiresApproval) + ", i." + q(cInvitePendingApproval) +
+                " FROM " + q(tInvites) + " i JOIN " + q(tClans) + " c ON c." + q(cClanIdClans) + " = i." + q(cInviteClanId) +
+                " WHERE i." + q(cInviteId) + "=? AND i." + q(cInviteClanId) + "=? AND i." + q(cInvitePendingApproval) + "=1 AND i." + q(cInviteExpiresAt) + " >= NOW() LIMIT 1";
+        try (Connection con = c();
+             PreparedStatement ps = con.prepareStatement(sql)) {
+            ps.setLong(1, inviteId);
+            ps.setLong(2, clanId);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (!rs.next()) return null;
+                return new InviteRow(
+                        rs.getLong(1), rs.getLong(2), rs.getString(3), rs.getString(4),
+                        UUID.fromString(rs.getString(5)), UUID.fromString(rs.getString(6)),
+                        readBool(rs, cInviteRequiresApproval), readBool(rs, cInvitePendingApproval)
+                );
             }
         }
     }
@@ -528,18 +601,66 @@ public final class ClanRepository {
         String order = cInviteCreatedAt != null ? " ORDER BY i." + q(cInviteCreatedAt) + " DESC" : " ORDER BY i." + q(cInviteId) + " DESC";
 
         String sql = "SELECT i." + q(cInviteId) + ", i." + q(cInviteClanId) + ", c." + q(cClanName) + ", c." + q(cClanTag) +
+                ", i." + q(cInviteTargetUuid) + ", i." + q(cInviteInviterUuid) +
+                ", i." + q(cInviteRequiresApproval) + ", i." + q(cInvitePendingApproval) +
                 " FROM " + q(tInvites) + " i JOIN " + q(tClans) + " c ON c." + q(cClanIdClans) + " = i." + q(cInviteClanId) +
-                " WHERE i." + q(cInviteTargetUuid) + "=? AND i." + q(cInviteExpiresAt) + " >= NOW()" + order;
+                " WHERE i." + q(cInviteTargetUuid) + "=? AND i." + q(cInvitePendingApproval) + "=0 AND i." + q(cInviteExpiresAt) + " >= NOW()" + order;
 
         List<InviteRow> out = new ArrayList<>();
         try (Connection con = c();
              PreparedStatement ps = con.prepareStatement(sql)) {
             ps.setString(1, target.toString());
             try (ResultSet rs = ps.executeQuery()) {
-                while (rs.next()) out.add(new InviteRow(rs.getLong(1), rs.getLong(2), rs.getString(3), rs.getString(4)));
+                while (rs.next()) {
+                    out.add(new InviteRow(
+                            rs.getLong(1), rs.getLong(2), rs.getString(3), rs.getString(4),
+                            UUID.fromString(rs.getString(5)), UUID.fromString(rs.getString(6)),
+                            readBool(rs, cInviteRequiresApproval), readBool(rs, cInvitePendingApproval)
+                    ));
+                }
             }
         }
         return out;
+    }
+
+    public List<InviteRow> getPendingApprovals(long clanId) throws Exception {
+        ensureResolved();
+        cleanupExpiredInvites();
+
+        String order = cInviteCreatedAt != null ? " ORDER BY i." + q(cInviteCreatedAt) + " DESC" : " ORDER BY i." + q(cInviteId) + " DESC";
+
+        String sql = "SELECT i." + q(cInviteId) + ", i." + q(cInviteClanId) + ", c." + q(cClanName) + ", c." + q(cClanTag) +
+                ", i." + q(cInviteTargetUuid) + ", i." + q(cInviteInviterUuid) +
+                ", i." + q(cInviteRequiresApproval) + ", i." + q(cInvitePendingApproval) +
+                " FROM " + q(tInvites) + " i JOIN " + q(tClans) + " c ON c." + q(cClanIdClans) + " = i." + q(cInviteClanId) +
+                " WHERE i." + q(cInviteClanId) + "=? AND i." + q(cInvitePendingApproval) + "=1 AND i." + q(cInviteExpiresAt) + " >= NOW()" + order;
+
+        List<InviteRow> out = new ArrayList<>();
+        try (Connection con = c();
+             PreparedStatement ps = con.prepareStatement(sql)) {
+            ps.setLong(1, clanId);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    out.add(new InviteRow(
+                            rs.getLong(1), rs.getLong(2), rs.getString(3), rs.getString(4),
+                            UUID.fromString(rs.getString(5)), UUID.fromString(rs.getString(6)),
+                            readBool(rs, cInviteRequiresApproval), readBool(rs, cInvitePendingApproval)
+                    ));
+                }
+            }
+        }
+        return out;
+    }
+
+    public void setInvitePendingApproval(long inviteId, boolean pending) throws Exception {
+        ensureResolved();
+        String sql = "UPDATE " + q(tInvites) + " SET " + q(cInvitePendingApproval) + "=? WHERE " + q(cInviteId) + "=?";
+        try (Connection con = c();
+             PreparedStatement ps = con.prepareStatement(sql)) {
+            ps.setBoolean(1, pending);
+            ps.setLong(2, inviteId);
+            ps.executeUpdate();
+        }
     }
 
     public void deleteInvite(long inviteId) throws Exception {

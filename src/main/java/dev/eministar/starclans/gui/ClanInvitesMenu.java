@@ -2,6 +2,7 @@ package dev.eministar.starclans.gui;
 
 import dev.eministar.starclans.StarClans;
 import dev.eministar.starclans.database.ClanRepository;
+import dev.eministar.starclans.model.MemberRole;
 import dev.eministar.starclans.utils.StarPrefix;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
@@ -19,8 +20,30 @@ import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.persistence.PersistentDataType;
 
 import java.util.List;
+import java.util.UUID;
 
 public final class ClanInvitesMenu implements Listener {
+
+    private static final class InviteDisplay {
+        final long id;
+        final String clanName;
+        final String clanTag;
+        final UUID targetUuid;
+        final String inviterName;
+        final MemberRole inviterRole;
+        final boolean approvalView;
+
+        InviteDisplay(long id, String clanName, String clanTag, UUID targetUuid,
+                      String inviterName, MemberRole inviterRole, boolean approvalView) {
+            this.id = id;
+            this.clanName = clanName;
+            this.clanTag = clanTag;
+            this.targetUuid = targetUuid;
+            this.inviterName = inviterName == null ? "Unknown" : inviterName;
+            this.inviterRole = inviterRole == null ? MemberRole.MEMBER : inviterRole;
+            this.approvalView = approvalView;
+        }
+    }
 
     private final StarClans plugin;
     private final ClanRepository repo;
@@ -42,11 +65,26 @@ public final class ClanInvitesMenu implements Listener {
             @Override
             public void run() {
                 try {
-                    List<ClanRepository.InviteRow> invites = repo.getInvites(p.getUniqueId());
+                    long clanId = repo.getClanIdByMember(p.getUniqueId());
+                    MemberRole role = clanId > 0 ? repo.getRole(p.getUniqueId()) : MemberRole.MEMBER;
+                    boolean approvals = clanId > 0 && role != MemberRole.MEMBER;
+                    List<ClanRepository.InviteRow> invites = approvals
+                            ? repo.getPendingApprovals(clanId)
+                            : repo.getInvites(p.getUniqueId());
+
+                    List<InviteDisplay> display = new java.util.ArrayList<>();
+                    for (ClanRepository.InviteRow row : invites) {
+                        String inviterName = approvals ? repo.getMemberName(row.inviterUuid) : repo.getMemberName(row.inviterUuid);
+                        MemberRole inviterRole = approvals ? repo.getRole(row.inviterUuid) : repo.getRole(row.inviterUuid);
+                        display.add(new InviteDisplay(
+                                row.id, row.clanName, row.clanTag, row.targetUuid,
+                                inviterName, inviterRole, approvals
+                        ));
+                    }
                     Bukkit.getScheduler().runTask(plugin, new Runnable() {
                         @Override
                         public void run() {
-                            openInv(p, invites);
+                            openInv(p, display);
                         }
                     });
                 } catch (Exception e) {
@@ -63,7 +101,7 @@ public final class ClanInvitesMenu implements Listener {
         });
     }
 
-    private void openInv(Player p, List<ClanRepository.InviteRow> invites) {
+    private void openInv(Player p, List<InviteDisplay> invites) {
         Inventory inv = Bukkit.createInventory(p, 54, title);
 
         for (int i = 0; i < 54; i++) inv.setItem(i, pane(Material.GRAY_STAINED_GLASS_PANE));
@@ -79,14 +117,35 @@ public final class ClanInvitesMenu implements Listener {
         inv.setItem(49, button(Material.BARRIER, "§c§lZurück", java.util.Arrays.asList("§7Zurück zum Clan-Menü"), "BACK", false, -1));
 
         int slot = 10;
-        for (ClanRepository.InviteRow row : invites) {
+        for (InviteDisplay row : invites) {
             if (slot >= 44) break;
             if (slot == 17 || slot == 26 || slot == 35) slot++;
 
-            ItemStack it = button(Material.PAPER,
-                    "§e§lInvite: §f" + row.clanName + " §8[§b" + row.clanTag + "§8]",
-                    java.util.Arrays.asList("§7Klick: §aAnnehmen", "§7Shift-Klick: §cAblehnen"),
-                    "INVITE", true, row.id);
+            String targetName = row.targetUuid == null ? "Unknown" : Bukkit.getOfflinePlayer(row.targetUuid).getName();
+            if (targetName == null) targetName = "Unknown";
+
+            ItemStack it;
+            if (row.approvalView) {
+                it = button(Material.PAPER,
+                        "§e§lAnfrage: §f" + targetName,
+                        java.util.Arrays.asList(
+                                "§7Eingeladen von: §f" + row.inviterName + " §8(" + roleColor(row.inviterRole) + row.inviterRole.name() + "§8)",
+                                "",
+                                "§7Klick: §aAnnehmen",
+                                "§7Shift-Klick: §cAblehnen"
+                        ),
+                        "INVITE", true, row.id);
+            } else {
+                it = button(Material.PAPER,
+                        "§e§lInvite: §f" + row.clanName + " §8[§b" + row.clanTag + "§8]",
+                        java.util.Arrays.asList(
+                                "§7Eingeladen von: §f" + row.inviterName + " §8(" + roleColor(row.inviterRole) + row.inviterRole.name() + "§8)",
+                                "",
+                                "§7Klick: §aAnnehmen",
+                                "§7Shift-Klick: §cAblehnen"
+                        ),
+                        "INVITE", true, row.id);
+            }
 
             inv.setItem(slot, it);
             slot++;
@@ -150,5 +209,11 @@ public final class ClanInvitesMenu implements Listener {
         if (glow) meta.addEnchant(Enchantment.DENSITY, 1, true);
         it.setItemMeta(meta);
         return it;
+    }
+
+    private String roleColor(MemberRole r) {
+        if (r == MemberRole.LEADER) return "§6";
+        if (r == MemberRole.OFFICER) return "§b";
+        return "§7";
     }
 }

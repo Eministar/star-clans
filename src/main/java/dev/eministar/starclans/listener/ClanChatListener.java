@@ -28,6 +28,7 @@ public final class ClanChatListener implements Listener {
 
     @EventHandler
     public void onChat(AsyncPlayerChatEvent e) {
+        if (e.isCancelled()) return;
         Player sender = e.getPlayer();
         UUID u = sender.getUniqueId();
 

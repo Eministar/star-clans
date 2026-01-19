@@ -13,11 +13,9 @@ import org.bukkit.Sound;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
-import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.InventoryCloseEvent;
-import org.bukkit.event.player.AsyncPlayerChatEvent;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemFlag;
 import org.bukkit.inventory.ItemStack;
@@ -44,6 +42,14 @@ public final class ClanTagStyleMenu implements Listener {
         }
     }
 
+    private static final class EditCtx {
+        String style;
+
+        EditCtx(String style) {
+            this.style = style == null ? "" : style;
+        }
+    }
+
     private final StarClans plugin;
     private final ClanService service;
     private final ClanRepository repo;
@@ -51,8 +57,9 @@ public final class ClanTagStyleMenu implements Listener {
     private final NamespacedKey key;
     private final String title = "§d§lClan §8| §fTag Styler";
 
-    private final Set<UUID> awaitingSuffix = ConcurrentHashMap.newKeySet();
     private final Map<UUID, CreateCtx> creating = new ConcurrentHashMap<>();
+    private final Map<UUID, EditCtx> editing = new ConcurrentHashMap<>();
+    private final Set<UUID> refreshing = ConcurrentHashMap.newKeySet();
 
     private final List<ColorPick> colors = List.of(
             new ColorPick("§0", Material.BLACK_DYE, "§0Schwarz"),
@@ -107,7 +114,11 @@ public final class ClanTagStyleMenu implements Listener {
                     return;
                 }
                 ClanRepository.ClanCosmeticsRow cos = repo.getCosmetics(prof.clanId);
-                sync(() -> openInvClan(p, prof, cos));
+                sync(() -> {
+                    EditCtx edit = new EditCtx(cos.tagStyle);
+                    editing.put(p.getUniqueId(), edit);
+                    openInvClan(p, prof, edit);
+                });
             } catch (Exception e) {
                 sync(() -> p.sendMessage(StarPrefix.PREFIX + "§cFehler. Console."));
                 e.printStackTrace();
@@ -121,31 +132,23 @@ public final class ClanTagStyleMenu implements Listener {
         openInvCreate(p, ctx);
     }
 
-    private void openInvClan(Player p, ClanProfile prof, ClanRepository.ClanCosmeticsRow cos) {
+    private void openInvClan(Player p, ClanProfile prof, EditCtx edit) {
         Inventory inv = Bukkit.createInventory(p, 45, title);
 
         for (int i = 0; i < 45; i++) inv.setItem(i, pane(Material.GRAY_STAINED_GLASS_PANE));
         for (int i = 0; i < 9; i++) inv.setItem(i, pane(Material.BLACK_STAINED_GLASS_PANE));
         for (int i = 36; i < 45; i++) inv.setItem(i, pane(Material.BLACK_STAINED_GLASS_PANE));
 
-        inv.setItem(4, previewClan(prof, cos));
+        inv.setItem(4, previewClan(prof, edit));
 
-        boolean bold = cos.tagStyle.contains("§l");
-        String currentColor = extractColor(cos.tagStyle);
+        boolean bold = edit.style.contains("§l");
+        String currentColor = extractColor(edit.style);
 
         for (int i = 0; i < Math.min(colors.size(), colorSlots.length); i++) {
             ColorPick c = colors.get(i);
             boolean selected = c.code.equals(currentColor);
             inv.setItem(colorSlots[i], colorButton(c, selected));
         }
-
-        inv.setItem(22, button(Material.FEATHER, "§bSuffix bearbeiten",
-                List.of("§7Aktuell: §f" + (cos.chatSuffix.isEmpty() ? "§7-" : cos.chatSuffix), "", "§bKlick §7und schreib es in den Chat", "§8(cancel zum Abbrechen)"),
-                "EDIT_SUFFIX", true));
-
-        inv.setItem(24, button(Material.SPYGLASS, "§7Suffix löschen",
-                List.of("§7Entfernt den Clan-Suffix"),
-                "CLEAR_SUFFIX", false));
 
         inv.setItem(33, button(Material.ANVIL, bold ? "§a§lFett: AN" : "§7Fett: AUS",
                 List.of("§7Togglest §lBold §7für den Tag"),
@@ -155,10 +158,15 @@ public final class ClanTagStyleMenu implements Listener {
                 List.of("§7Setzt Style auf Standard"),
                 "RESET", false));
 
+        inv.setItem(38, button(Material.EMERALD, "§a§lSpeichern",
+                List.of("§7Speichert den Tag-Style"),
+                "SAVE", true));
+
         inv.setItem(40, button(Material.BARRIER, "§cZurück",
                 List.of("§7Zurück ins Clan-Menü"),
                 "BACK", false));
 
+        markRefreshing(p);
         p.openInventory(inv);
         p.playSound(p.getLocation(), Sound.UI_BUTTON_CLICK, 0.7f, 1.25f);
     }
@@ -193,6 +201,7 @@ public final class ClanTagStyleMenu implements Listener {
                 List.of("§7Zurück zum Erstellen"),
                 "CREATE_BACK", false));
 
+        markRefreshing(p);
         p.openInventory(inv);
         p.playSound(p.getLocation(), Sound.UI_BUTTON_CLICK, 0.7f, 1.25f);
     }
@@ -254,72 +263,82 @@ public final class ClanTagStyleMenu implements Listener {
             return;
         }
 
+        EditCtx edit = editing.get(p.getUniqueId());
+        if (edit == null) {
+            edit = new EditCtx("");
+            editing.put(p.getUniqueId(), edit);
+        }
+
         if (action.equals("BACK")) {
+            editing.remove(p.getUniqueId());
             p.closeInventory();
             p.performCommand("clan");
             return;
         }
 
-        if (action.equals("EDIT_SUFFIX")) {
-            awaitingSuffix.add(p.getUniqueId());
-            p.closeInventory();
-            p.sendMessage(StarPrefix.PREFIX + "§7Schreib den neuen §bClan-Suffix §7in den Chat. §8(cancel zum Abbrechen)");
-            p.playSound(p.getLocation(), Sound.UI_BUTTON_CLICK, 0.8f, 1.6f);
-            return;
-        }
-
-        if (action.equals("CLEAR_SUFFIX")) {
-            service.setChatSuffix(p, "", s -> p.sendMessage(StarPrefix.PREFIX + s));
-            p.playSound(p.getLocation(), Sound.UI_BUTTON_CLICK, 0.8f, 1.6f);
-            Bukkit.getScheduler().runTaskLater(plugin, () -> open(p), 2L);
-            return;
-        }
-
         if (action.equals("TOGGLE_BOLD")) {
-            applyBoldToggleClan(p);
+            String color = extractColor(edit.style);
+            boolean bold = edit.style.contains("§l");
+
+            String style = color + (!bold ? "§l" : "");
+            if (color.isEmpty()) style = !bold ? "§f§l" : "§f";
+            edit.style = style;
+
+            ClanProfile prof = service.getCached(p.getUniqueId());
+            if (prof == null) {
+                open(p);
+                return;
+            }
+            openInvClan(p, prof, edit);
+            p.playSound(p.getLocation(), Sound.UI_BUTTON_CLICK, 0.7f, 1.35f);
             return;
         }
 
         if (action.equals("RESET")) {
-            service.setTagStyle(p, "", s -> p.sendMessage(StarPrefix.PREFIX + s));
-            p.playSound(p.getLocation(), Sound.UI_BUTTON_CLICK, 0.8f, 1.6f);
-            Bukkit.getScheduler().runTaskLater(plugin, () -> open(p), 2L);
+            edit.style = "";
+            ClanProfile prof = service.getCached(p.getUniqueId());
+            if (prof == null) {
+                open(p);
+                return;
+            }
+            openInvClan(p, prof, edit);
+            p.playSound(p.getLocation(), Sound.UI_BUTTON_CLICK, 0.7f, 1.35f);
             return;
         }
 
         if (action.startsWith("COLOR:")) {
             String code = action.substring("COLOR:".length());
-            applyColorClan(p, code);
-        }
-    }
-
-    @EventHandler(priority = EventPriority.HIGHEST)
-    public void onChat(AsyncPlayerChatEvent e) {
-        Player p = e.getPlayer();
-        if (!awaitingSuffix.contains(p.getUniqueId())) return;
-
-        e.setCancelled(true);
-        awaitingSuffix.remove(p.getUniqueId());
-
-        String msg = e.getMessage() == null ? "" : e.getMessage().trim();
-        if (msg.equalsIgnoreCase("cancel")) {
-            sync(() -> {
-                p.sendMessage(StarPrefix.PREFIX + "§7Abgebrochen.");
+            boolean bold = edit.style.contains("§l");
+            edit.style = code + (bold ? "§l" : "");
+            ClanProfile prof = service.getCached(p.getUniqueId());
+            if (prof == null) {
                 open(p);
-            });
+                return;
+            }
+            openInvClan(p, prof, edit);
+            p.playSound(p.getLocation(), Sound.UI_BUTTON_CLICK, 0.7f, 1.35f);
             return;
         }
 
-        service.setChatSuffix(p, msg, s -> sync(() -> {
-            p.sendMessage(StarPrefix.PREFIX + s);
-            open(p);
-        }));
+        if (action.equals("SAVE")) {
+            service.setTagStyle(p, edit.style, s -> {
+                p.sendMessage(StarPrefix.PREFIX + s);
+                editing.remove(p.getUniqueId());
+                open(p);
+            });
+            p.playSound(p.getLocation(), Sound.UI_BUTTON_CLICK, 0.8f, 1.6f);
+            return;
+        }
     }
 
     @EventHandler
     public void onClose(InventoryCloseEvent e) {
         if (!(e.getPlayer() instanceof Player p)) return;
         if (!title.equals(e.getView().getTitle())) return;
+
+        if (refreshing.remove(p.getUniqueId())) {
+            return;
+        }
 
         CreateCtx ctx = creating.remove(p.getUniqueId());
         if (ctx != null) {
@@ -329,64 +348,17 @@ public final class ClanTagStyleMenu implements Listener {
                 ctx.back.run();
             });
         }
+        editing.remove(p.getUniqueId());
     }
 
-    private void applyColorClan(Player p, String code) {
-        Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
-            try {
-                ClanProfile prof = service.getCached(p.getUniqueId());
-                if (prof == null || !prof.inClan) return;
-
-                ClanRepository.ClanCosmeticsRow cos = repo.getCosmetics(prof.clanId);
-                boolean bold = cos.tagStyle.contains("§l");
-                String style = code + (bold ? "§l" : "");
-
-                service.setTagStyle(p, style, s -> p.sendMessage(StarPrefix.PREFIX + s));
-
-                sync(() -> {
-                    p.playSound(p.getLocation(), Sound.UI_BUTTON_CLICK, 0.8f, 1.7f);
-                    open(p);
-                });
-            } catch (Exception ex) {
-                ex.printStackTrace();
-            }
-        });
-    }
-
-    private void applyBoldToggleClan(Player p) {
-        Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
-            try {
-                ClanProfile prof = service.getCached(p.getUniqueId());
-                if (prof == null || !prof.inClan) return;
-
-                ClanRepository.ClanCosmeticsRow cos = repo.getCosmetics(prof.clanId);
-                String color = extractColor(cos.tagStyle);
-                boolean bold = cos.tagStyle.contains("§l");
-
-                String style = color + (!bold ? "§l" : "");
-                if (color.isEmpty()) style = !bold ? "§f§l" : "§f";
-
-                service.setTagStyle(p, style, s -> p.sendMessage(StarPrefix.PREFIX + s));
-
-                sync(() -> {
-                    p.playSound(p.getLocation(), Sound.UI_BUTTON_CLICK, 0.8f, 1.7f);
-                    open(p);
-                });
-            } catch (Exception ex) {
-                ex.printStackTrace();
-            }
-        });
-    }
-
-    private ItemStack previewClan(ClanProfile prof, ClanRepository.ClanCosmeticsRow cos) {
-        String styled = (cos.tagStyle.isEmpty() ? "§b" : cos.tagStyle) + prof.clanTag + "§r";
+    private ItemStack previewClan(ClanProfile prof, EditCtx edit) {
+        String styled = (edit.style.isEmpty() ? "§b" : edit.style) + prof.clanTag + "§r";
         ItemStack it = new ItemStack(Material.NETHER_STAR);
         ItemMeta meta = it.getItemMeta();
         meta.setDisplayName("§d§lPreview");
         meta.setLore(List.of(
                 "§8",
-                "§7Tag: §8[§r" + styled + "§8]",
-                "§7Suffix: §f" + (cos.chatSuffix.isEmpty() ? "§7-" : cos.chatSuffix),
+                "§7Suffix: §8[§r" + styled + "§8]",
                 "§8"
         ));
         meta.addItemFlags(ItemFlag.HIDE_ENCHANTS);
@@ -460,6 +432,12 @@ public final class ClanTagStyleMenu implements Listener {
 
     private void sync(Runnable r) {
         Bukkit.getScheduler().runTask(plugin, r);
+    }
+
+    private void markRefreshing(Player p) {
+        java.util.UUID u = p.getUniqueId();
+        refreshing.add(u);
+        Bukkit.getScheduler().runTask(plugin, () -> refreshing.remove(u));
     }
 
     private static final class ColorPick {

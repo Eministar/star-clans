@@ -27,6 +27,8 @@ public final class ClanMemberManageMenu implements Listener {
     private final ClanMembersMenu membersMenu;
 
     private final Map<UUID, UUID> target = new HashMap<>();
+    private final Map<UUID, MemberRole> viewerRole = new HashMap<>();
+    private final Map<UUID, MemberRole> targetRole = new HashMap<>();
 
     public ClanMemberManageMenu(StarClans plugin, ClanService service, ClanRepository repo, ClanMembersMenu membersMenu) {
         this.plugin = plugin;
@@ -53,6 +55,21 @@ public final class ClanMemberManageMenu implements Listener {
                 MemberRole vRole = repo.getRole(viewer.getUniqueId());
                 MemberRole tRole = repo.getRole(targetUuid);
 
+                if (vRole == MemberRole.MEMBER) {
+                    Bukkit.getScheduler().runTask(plugin, () -> viewer.sendMessage(StarPrefix.PREFIX + "§cKeine Rechte."));
+                    return;
+                }
+
+                if (vRole == MemberRole.OFFICER && tRole != MemberRole.MEMBER) {
+                    Bukkit.getScheduler().runTask(plugin, () -> viewer.sendMessage(StarPrefix.PREFIX + "§cDu kannst nur Member verwalten."));
+                    return;
+                }
+
+                if (vRole == MemberRole.LEADER && tRole == MemberRole.LEADER) {
+                    Bukkit.getScheduler().runTask(plugin, () -> viewer.sendMessage(StarPrefix.PREFIX + "§cDu kannst den Leader nicht verwalten."));
+                    return;
+                }
+
                 Bukkit.getScheduler().runTask(plugin, () -> openInv(viewer, targetUuid, vRole, tRole));
             } catch (Exception e) {
                 Bukkit.getScheduler().runTask(plugin, () -> viewer.sendMessage(StarPrefix.PREFIX + "§cFehler. Console."));
@@ -63,6 +80,8 @@ public final class ClanMemberManageMenu implements Listener {
 
     private void openInv(Player viewer, UUID t, MemberRole vRole, MemberRole tRole) {
         target.put(viewer.getUniqueId(), t);
+        viewerRole.put(viewer.getUniqueId(), vRole);
+        targetRole.put(viewer.getUniqueId(), tRole);
 
         Inventory inv = Bukkit.createInventory(null, 27, "§b§lMember §8| §fManage");
 
@@ -74,10 +93,15 @@ public final class ClanMemberManageMenu implements Listener {
         inv.setItem(15, demote());
         inv.setItem(22, kick());
 
-        boolean can = vRole != MemberRole.MEMBER;
-        if (!can) {
+        boolean canKick = vRole != MemberRole.MEMBER;
+        boolean canPromote = vRole == MemberRole.LEADER;
+
+        if (!canPromote) {
             inv.setItem(11, locked("§cKeine Rechte"));
             inv.setItem(15, locked("§cKeine Rechte"));
+        }
+
+        if (!canKick) {
             inv.setItem(22, locked("§cKeine Rechte"));
         }
 
@@ -96,6 +120,9 @@ public final class ClanMemberManageMenu implements Listener {
         UUID u = p.getUniqueId();
         UUID t = target.get(u);
         if (t == null) return;
+        MemberRole vRole = viewerRole.get(u);
+        MemberRole tRole = targetRole.get(u);
+        if (vRole == null || tRole == null) return;
 
         int slot = e.getRawSlot();
         if (slot == 18) {
@@ -105,6 +132,10 @@ public final class ClanMemberManageMenu implements Listener {
         }
 
         if (slot == 11) {
+            if (vRole != MemberRole.LEADER) {
+                p.sendMessage(StarPrefix.PREFIX + "§cKeine Rechte.");
+                return;
+            }
             service.promote(p, t, s -> {
                 p.sendMessage(StarPrefix.PREFIX + s);
                 open(p, t);
@@ -114,6 +145,10 @@ public final class ClanMemberManageMenu implements Listener {
         }
 
         if (slot == 15) {
+            if (vRole != MemberRole.LEADER) {
+                p.sendMessage(StarPrefix.PREFIX + "§cKeine Rechte.");
+                return;
+            }
             service.demote(p, t, s -> {
                 p.sendMessage(StarPrefix.PREFIX + s);
                 open(p, t);
@@ -123,6 +158,14 @@ public final class ClanMemberManageMenu implements Listener {
         }
 
         if (slot == 22) {
+            if (vRole == MemberRole.MEMBER) {
+                p.sendMessage(StarPrefix.PREFIX + "§cKeine Rechte.");
+                return;
+            }
+            if (vRole == MemberRole.OFFICER && tRole != MemberRole.MEMBER) {
+                p.sendMessage(StarPrefix.PREFIX + "§cDu kannst nur Member kicken.");
+                return;
+            }
             service.kick(p, t, s -> {
                 p.sendMessage(StarPrefix.PREFIX + s);
                 membersMenu.open(p);
