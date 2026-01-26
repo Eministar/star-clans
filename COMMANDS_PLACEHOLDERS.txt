@@ -1,0 +1,94 @@
+StarClans - Commands & Placeholders
+==================================
+
+Commands (from plugin.yml / command classes)
+--------------------------------------------
+/clan
+  - Opens the main clan menu
+  - Aliases: /clans
+
+/clan create
+  - Opens the clan creation menu
+
+/clan invites
+  - Opens invites/requests menu
+
+/clan invite <player>
+  - Invites a player to your clan
+
+/clan accept <id>
+  - Accepts an invite/request by ID
+
+/clan deny <id>
+  - Denies an invite/request by ID
+
+/clan members
+  - Opens the members list
+
+/clan members <player>
+  - Opens manage menu for that member
+
+/clan manage
+  - Opens clan manage GUI (leader only)
+
+/clan settings
+  - Opens settings menu
+
+/clan tagstyler
+  - Opens tag/suffix style menu
+  - Aliases: /clan tagstyle, /clan styler
+
+/clan chat
+  - Toggles clan chat
+
+/clan kick <player>
+  - Kicks a member
+
+/clan promote <player>
+  - Promotes a member
+
+/clan demote <player>
+  - Demotes a member
+
+/clan leave
+  - Leaves your clan
+
+/clan disband
+  - Disbands the clan (leader only)
+
+/starclans reload
+  - Reloads config, Vault, and DB schema
+  - Permission: starclans.admin.reload
+  - Aliases: /sc
+
+Placeholders (PlaceholderAPI)
+-----------------------------
+Identifier: starclans
+Author: Emin
+
+%starclans_name%
+  - Clan name (empty if none)
+
+%starclans_name_formatted%
+  - Formatted clan name with member count, e.g. "ClanName (5)"; "(-)" if none
+
+%starclans_tag%
+  - Clan tag (empty if none)
+
+%starclans_role%
+  - Member role: Leader / Officer / Member (empty if not in clan)
+
+%starclans_members%
+  - Member count ("0" if not in clan)
+
+%starclans_invites%
+  - Invite count for player ("0" if not cached)
+
+%starclans_in_clan%
+  - "true" or "false"
+
+%starclans_suffix%
+  - Suffix like "[TAG]" with style (empty if none)
+
+%starclans_formatted_suffix%
+  - Same as suffix, but prefixed with a space if not empty

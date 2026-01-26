@@ -9,6 +9,9 @@ import dev.eministar.starclans.listener.GlobalChatListener;
 import dev.eministar.starclans.listener.ProfilePreloadListener;
 import dev.eministar.starclans.placeholder.StarClansExpansion;
 import dev.eministar.starclans.service.ClanService;
+import dev.eministar.starclans.utils.Banner;
+import dev.eministar.starclans.utils.UpdateChecker;
+import dev.eministar.starclans.utils.Version;
 import dev.eministar.starclans.vault.VaultHook;
 import org.bukkit.Bukkit;
 import org.bukkit.plugin.java.JavaPlugin;
@@ -29,6 +32,9 @@ public final class StarClans extends JavaPlugin {
     @Override
     public void onEnable() {
         saveDefaultConfig();
+
+        Version.init(this);
+        UpdateChecker.check(this);
 
         VaultHook.init(this);
 
@@ -83,6 +89,7 @@ public final class StarClans extends JavaPlugin {
             getLogger().warning("PlaceholderAPI not found. Placeholders disabled.");
         }
 
+        Banner.print(this);
         getLogger().info("StarClans enabled.");
     }
 
