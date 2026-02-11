@@ -19,3 +19,6 @@ clan:
     maxNameLen: 16
     minTagLen: 2
     maxTagLen: 5
+
+lang:
+  file: "lang.yml"

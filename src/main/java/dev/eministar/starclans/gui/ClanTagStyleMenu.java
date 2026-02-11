@@ -5,7 +5,6 @@ import dev.eministar.starclans.database.ClanRepository;
 import dev.eministar.starclans.model.ClanProfile;
 import dev.eministar.starclans.model.MemberRole;
 import dev.eministar.starclans.service.ClanService;
-import dev.eministar.starclans.utils.StarPrefix;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
@@ -55,30 +54,13 @@ public final class ClanTagStyleMenu implements Listener {
     private final ClanRepository repo;
 
     private final NamespacedKey key;
-    private final String title = "§d§lClan §8| §fTag Styler";
+    private String title;
 
     private final Map<UUID, CreateCtx> creating = new ConcurrentHashMap<>();
     private final Map<UUID, EditCtx> editing = new ConcurrentHashMap<>();
     private final Set<UUID> refreshing = ConcurrentHashMap.newKeySet();
 
-    private final List<ColorPick> colors = List.of(
-            new ColorPick("§0", Material.BLACK_DYE, "§0Schwarz"),
-            new ColorPick("§8", Material.GRAY_DYE, "§8Grau"),
-            new ColorPick("§7", Material.LIGHT_GRAY_DYE, "§7Hellgrau"),
-            new ColorPick("§f", Material.WHITE_DYE, "§fWeiß"),
-            new ColorPick("§c", Material.RED_DYE, "§cRot"),
-            new ColorPick("§6", Material.ORANGE_DYE, "§6Orange"),
-            new ColorPick("§e", Material.YELLOW_DYE, "§eGelb"),
-            new ColorPick("§a", Material.LIME_DYE, "§aHellgrün"),
-            new ColorPick("§2", Material.GREEN_DYE, "§2Grün"),
-            new ColorPick("§b", Material.LIGHT_BLUE_DYE, "§bHellblau"),
-            new ColorPick("§3", Material.CYAN_DYE, "§3Cyan"),
-            new ColorPick("§9", Material.BLUE_DYE, "§9Blau"),
-            new ColorPick("§d", Material.MAGENTA_DYE, "§dMagenta"),
-            new ColorPick("§5", Material.PURPLE_DYE, "§5Lila"),
-            new ColorPick("§4", Material.BROWN_DYE, "§4Braun"),
-            new ColorPick("§1", Material.LAPIS_LAZULI, "§1Dunkelblau")
-    );
+    private final List<ColorPick> colors;
 
     private final int[] colorSlots = {10,11,12,13,14,15,16,19,20,21,23,25,28,29,30,31};
 
@@ -87,6 +69,25 @@ public final class ClanTagStyleMenu implements Listener {
         this.service = service;
         this.repo = repo;
         this.key = new NamespacedKey(plugin, "sc_tagstyler");
+        this.title = plugin.lang().get("gui.tag_style.title");
+        this.colors = List.of(
+                new ColorPick("§0", Material.BLACK_DYE, "black"),
+                new ColorPick("§8", Material.GRAY_DYE, "gray"),
+                new ColorPick("§7", Material.LIGHT_GRAY_DYE, "light_gray"),
+                new ColorPick("§f", Material.WHITE_DYE, "white"),
+                new ColorPick("§c", Material.RED_DYE, "red"),
+                new ColorPick("§6", Material.ORANGE_DYE, "orange"),
+                new ColorPick("§e", Material.YELLOW_DYE, "yellow"),
+                new ColorPick("§a", Material.LIME_DYE, "lime"),
+                new ColorPick("§2", Material.GREEN_DYE, "green"),
+                new ColorPick("§b", Material.LIGHT_BLUE_DYE, "light_blue"),
+                new ColorPick("§3", Material.CYAN_DYE, "cyan"),
+                new ColorPick("§9", Material.BLUE_DYE, "blue"),
+                new ColorPick("§d", Material.MAGENTA_DYE, "magenta"),
+                new ColorPick("§5", Material.PURPLE_DYE, "purple"),
+                new ColorPick("§4", Material.BROWN_DYE, "brown"),
+                new ColorPick("§1", Material.LAPIS_LAZULI, "dark_blue")
+        );
     }
 
     public void open(Player p) {
@@ -102,7 +103,7 @@ public final class ClanTagStyleMenu implements Listener {
             return;
         }
         if (!prof.inClan) {
-            p.sendMessage(StarPrefix.PREFIX + "§cDu bist in keinem Clan.");
+            p.sendMessage(plugin.lang().prefixed("messages.not_in_clan"));
             return;
         }
 
@@ -110,7 +111,7 @@ public final class ClanTagStyleMenu implements Listener {
             try {
                 MemberRole r = repo.getRole(p.getUniqueId());
                 if (r == MemberRole.MEMBER) {
-                    sync(() -> p.sendMessage(StarPrefix.PREFIX + "§cKeine Rechte."));
+                    sync(() -> p.sendMessage(plugin.lang().prefixed("messages.no_rights")));
                     return;
                 }
                 ClanRepository.ClanCosmeticsRow cos = repo.getCosmetics(prof.clanId);
@@ -120,7 +121,7 @@ public final class ClanTagStyleMenu implements Listener {
                     openInvClan(p, prof, edit);
                 });
             } catch (Exception e) {
-                sync(() -> p.sendMessage(StarPrefix.PREFIX + "§cFehler. Console."));
+                sync(() -> p.sendMessage(plugin.lang().prefixed("messages.error_console")));
                 e.printStackTrace();
             }
         });
@@ -133,6 +134,7 @@ public final class ClanTagStyleMenu implements Listener {
     }
 
     private void openInvClan(Player p, ClanProfile prof, EditCtx edit) {
+        this.title = plugin.lang().get("gui.tag_style.title");
         Inventory inv = Bukkit.createInventory(p, 45, title);
 
         for (int i = 0; i < 45; i++) inv.setItem(i, pane(Material.GRAY_STAINED_GLASS_PANE));
@@ -150,20 +152,21 @@ public final class ClanTagStyleMenu implements Listener {
             inv.setItem(colorSlots[i], colorButton(c, selected));
         }
 
-        inv.setItem(33, button(Material.ANVIL, bold ? "§a§lFett: AN" : "§7Fett: AUS",
-                List.of("§7Togglest §lBold §7für den Tag"),
+        inv.setItem(33, button(Material.ANVIL,
+                plugin.lang().get(bold ? "gui.tag_style.bold.on" : "gui.tag_style.bold.off"),
+                plugin.lang().getList("gui.tag_style.bold.lore"),
                 "TOGGLE_BOLD", bold));
 
-        inv.setItem(34, button(Material.BUCKET, "§7Reset",
-                List.of("§7Setzt Style auf Standard"),
+        inv.setItem(34, button(Material.BUCKET, plugin.lang().get("gui.tag_style.reset.name"),
+                plugin.lang().getList("gui.tag_style.reset.lore"),
                 "RESET", false));
 
-        inv.setItem(38, button(Material.EMERALD, "§a§lSpeichern",
-                List.of("§7Speichert den Tag-Style"),
+        inv.setItem(38, button(Material.EMERALD, plugin.lang().get("gui.tag_style.save.name"),
+                plugin.lang().getList("gui.tag_style.save.lore"),
                 "SAVE", true));
 
-        inv.setItem(40, button(Material.BARRIER, "§cZurück",
-                List.of("§7Zurück ins Clan-Menü"),
+        inv.setItem(40, button(Material.BARRIER, plugin.lang().get("gui.tag_style.back.name"),
+                plugin.lang().getList("gui.tag_style.back.lore"),
                 "BACK", false));
 
         markRefreshing(p);
@@ -172,6 +175,7 @@ public final class ClanTagStyleMenu implements Listener {
     }
 
     private void openInvCreate(Player p, CreateCtx ctx) {
+        this.title = plugin.lang().get("gui.tag_style.title");
         Inventory inv = Bukkit.createInventory(p, 45, title);
 
         for (int i = 0; i < 45; i++) inv.setItem(i, pane(Material.GRAY_STAINED_GLASS_PANE));
@@ -189,16 +193,17 @@ public final class ClanTagStyleMenu implements Listener {
             inv.setItem(colorSlots[i], colorButton(c, selected));
         }
 
-        inv.setItem(33, button(Material.ANVIL, bold ? "§a§lFett: AN" : "§7Fett: AUS",
-                List.of("§7Togglest §lBold §7für den Tag"),
+        inv.setItem(33, button(Material.ANVIL,
+                plugin.lang().get(bold ? "gui.tag_style.bold.on" : "gui.tag_style.bold.off"),
+                plugin.lang().getList("gui.tag_style.bold.lore"),
                 "CREATE_TOGGLE_BOLD", bold));
 
-        inv.setItem(34, button(Material.BUCKET, "§7Reset",
-                List.of("§7Setzt Style auf Standard"),
+        inv.setItem(34, button(Material.BUCKET, plugin.lang().get("gui.tag_style.reset.name"),
+                plugin.lang().getList("gui.tag_style.reset.lore"),
                 "CREATE_RESET", false));
 
-        inv.setItem(40, button(Material.BARRIER, "§cZurück",
-                List.of("§7Zurück zum Erstellen"),
+        inv.setItem(40, button(Material.BARRIER, plugin.lang().get("gui.tag_style.create_back.name"),
+                plugin.lang().getList("gui.tag_style.create_back.lore"),
                 "CREATE_BACK", false));
 
         markRefreshing(p);
@@ -322,7 +327,7 @@ public final class ClanTagStyleMenu implements Listener {
 
         if (action.equals("SAVE")) {
             service.setTagStyle(p, edit.style, s -> {
-                p.sendMessage(StarPrefix.PREFIX + s);
+                p.sendMessage(plugin.lang().prefixedRaw(s));
                 editing.remove(p.getUniqueId());
                 open(p);
             });
@@ -355,12 +360,9 @@ public final class ClanTagStyleMenu implements Listener {
         String styled = (edit.style.isEmpty() ? "§b" : edit.style) + prof.clanTag + "§r";
         ItemStack it = new ItemStack(Material.NETHER_STAR);
         ItemMeta meta = it.getItemMeta();
-        meta.setDisplayName("§d§lPreview");
-        meta.setLore(List.of(
-                "§8",
-                "§7Suffix: §8[§r" + styled + "§8]",
-                "§8"
-        ));
+        meta.setDisplayName(plugin.lang().get("gui.tag_style.preview.name"));
+        meta.setLore(plugin.lang().getList("gui.tag_style.preview.lore_clan",
+                "styled", styled));
         meta.addItemFlags(ItemFlag.HIDE_ENCHANTS);
         meta.addEnchant(Enchantment.DENSITY, 1, true);
         it.setItemMeta(meta);
@@ -371,13 +373,9 @@ public final class ClanTagStyleMenu implements Listener {
         String styled = (style == null || style.isEmpty() ? "§b" : style) + tag + "§r";
         ItemStack it = new ItemStack(Material.NETHER_STAR);
         ItemMeta meta = it.getItemMeta();
-        meta.setDisplayName("§d§lPreview");
-        meta.setLore(List.of(
-                "§8",
-                "§7Tag: §8[§r" + styled + "§8]",
-                "§8",
-                "§7Wird beim Erstellen gespeichert"
-        ));
+        meta.setDisplayName(plugin.lang().get("gui.tag_style.preview.name"));
+        meta.setLore(plugin.lang().getList("gui.tag_style.preview.lore_create",
+                "styled", styled));
         meta.addItemFlags(ItemFlag.HIDE_ENCHANTS);
         meta.addEnchant(Enchantment.DENSITY, 1, true);
         it.setItemMeta(meta);
@@ -387,8 +385,8 @@ public final class ClanTagStyleMenu implements Listener {
     private ItemStack colorButton(ColorPick c, boolean selected) {
         ItemStack it = new ItemStack(c.mat);
         ItemMeta meta = it.getItemMeta();
-        meta.setDisplayName(c.name);
-        meta.setLore(List.of(selected ? "§aAusgewählt" : "§7Klick zum Auswählen"));
+        meta.setDisplayName(plugin.lang().get("gui.tag_style.colors." + c.nameKey));
+        meta.setLore(List.of(plugin.lang().get(selected ? "gui.tag_style.color.selected" : "gui.tag_style.color.select")));
         meta.getPersistentDataContainer().set(key, PersistentDataType.STRING, "COLOR:" + c.code);
         if (selected) {
             meta.addEnchant(Enchantment.DENSITY, 1, true);
@@ -401,7 +399,7 @@ public final class ClanTagStyleMenu implements Listener {
     private ItemStack pane(Material m) {
         ItemStack it = new ItemStack(m);
         ItemMeta meta = it.getItemMeta();
-        meta.setDisplayName("§r");
+        meta.setDisplayName(plugin.lang().get("gui.tag_style.glass"));
         it.setItemMeta(meta);
         return it;
     }
@@ -443,12 +441,12 @@ public final class ClanTagStyleMenu implements Listener {
     private static final class ColorPick {
         final String code;
         final Material mat;
-        final String name;
+        final String nameKey;
 
-        ColorPick(String code, Material mat, String name) {
+        ColorPick(String code, Material mat, String nameKey) {
             this.code = code;
             this.mat = mat;
-            this.name = name;
+            this.nameKey = nameKey;
         }
     }
 }

@@ -1,0 +1,473 @@
+#
+# StarClans language file
+# Color codes: use & (e.g. &a, &7, &l). Placeholders: {name}, {tag}, {player}, ...
+#
+
+prefix: "&8[&x&7&B&D&B&F&F&lS&x&6&9&C&D&F&F&lt&x&5&7&B&F&F&F&la&x&4&5&B&1&F&F&lr&x&3&3&A&3&F&F&lC&x&2&1&9&5&F&F&ll&x&1&0&8&7&F&F&la&x&0&0&7&9&F&F&ln&x&0&0&7&9&F&F&ls&8] &7» &r"
+
+roles:
+  leader: "Leader"
+  officer: "Officer"
+  member: "Member"
+
+role_colors:
+  leader: "&6"
+  officer: "&b"
+  member: "&7"
+
+messages:
+  # generic
+  player_only: "&cNur Spieler."
+  not_online: "&cSpieler nicht online."
+  not_in_clan: "&cDu bist in keinem Clan."
+  not_in_your_clan: "&cNicht in deinem Clan."
+  already_in_clan: "&cDu bist schon in einem Clan."
+  already_in_clan_other: "&cDer Spieler ist schon in einem Clan."
+  only_leader_manage: "&cNur der Leader kann Clan-Manage öffnen."
+  only_member_manage: "&cDu kannst nur Member verwalten."
+  cannot_manage_leader: "&cDu kannst den Leader nicht verwalten."
+  no_permission: "&cKeine Rechte."
+  no_rights: "&cKeine Rechte."
+  error_console: "&cFehler. Console."
+  load_failed: "&cFehler beim Laden. Console."
+  load_failed_short: "&cFehler beim Laden."
+  invalid_id: "&cUngültige ID."
+  db_schema_failed: "&cDB Schema init failed. Console."
+  reload_done: "&aReload done. &7Config/Vault/DB refreshed."
+  clan_chat_on: "&aClan-Chat aktiviert."
+  clan_chat_off: "&7Clan-Chat deaktiviert."
+  money_suffix: "&e$"
+  generic_unknown: "Unknown"
+  generic_player: "Spieler"
+  generic_member: "Member"
+  generic_new_member: "Neues Mitglied"
+
+  use:
+    starclans_reload: "&7Nutze: &f/starclans reload"
+    clan_invite: "&7Nutze: &f/clan invite <Spieler>"
+    clan_accept: "&7Nutze: &f/clan accept <id>"
+    clan_deny: "&7Nutze: &f/clan deny <id>"
+    clan_kick: "&7Nutze: &f/clan kick <Spieler>"
+    clan_promote: "&7Nutze: &f/clan promote <Spieler>"
+    clan_demote: "&7Nutze: &f/clan demote <Spieler>"
+
+  help:
+    title: "&e&lClan Hilfe"
+    lines:
+      - "&8• &f/clan &7- Hauptmenü öffnen"
+      - "&8• &f/clan create &7- Clan erstellen"
+      - "&8• &f/clan invites &7- Einladungen/Anfragen ansehen"
+      - "&8• &f/clan invite <Spieler> &7- Spieler einladen"
+      - "&8• &f/clan accept <id> &7- Einladung/Anfrage annehmen"
+      - "&8• &f/clan deny <id> &7- Einladung/Anfrage ablehnen"
+      - "&8• &f/clan members &7- Mitgliederliste oeffnen"
+      - "&8• &f/clan members <Spieler> &7- Member verwalten"
+      - "&8• &f/clan manage &7- Clan-Manage GUI (Leader)"
+      - "&8• &f/clan settings &7- Einstellungen oeffnen"
+      - "&8• &f/clan tagstyler &7- Tag/Suffix stylen"
+      - "&8• &f/clan chat &7- Clan-Chat togglen"
+      - "&8• &f/clan kick <Spieler> &7- Member kicken"
+      - "&8• &f/clan promote <Spieler> &7- Member befoerdern"
+      - "&8• &f/clan demote <Spieler> &7- Member demoten"
+      - "&8• &f/clan leave &7- Clan verlassen"
+      - "&8• &f/clan disband &7- Clan loeschen (Leader)"
+
+  create:
+    name_len: "&cName muss {min}-{max} Zeichen sein."
+    tag_len: "&cTag muss {min}-{max} Zeichen sein."
+    invalid_chars: "&cNur A-Z, 0-9 und _ erlaubt."
+    vault_missing: "&cVault/Economy fehlt, aber Kosten > 0."
+    already_in_clan: "&cDu bist schon in einem Clan."
+    name_taken: "&cClan-Name ist vergeben."
+    tag_taken: "&cClan-Tag ist vergeben."
+    not_enough_money: "&cZu wenig Geld. Kosten: &6{cost}"
+    success: "&aClan erstellt! &f{name} &8[&b{tag}&8]"
+    fail: "&cFehler beim Erstellen. Console."
+    prompt_name: "&7Schreib jetzt den &fClan-Namen &7in den Chat. &8(/clan cancel)"
+    prompt_tag: "&7Schreib jetzt den &fClan-Tag &7in den Chat. &8(/clan cancel)"
+    name_set: "&aName gesetzt: &f{name}"
+    tag_set: "&aTag gesetzt: &f{tag}"
+
+  invite:
+    sent: "&aInvite gesendet an &f{player}&a."
+    approval_inviter: "&7Bei Annahme ist eine Freigabe von Officer/Leader noetig."
+    target_invited: "&7Du wurdest in einen Clan eingeladen."
+    approval_target: "&7Wenn du annimmst, muss ein Officer/Leader bestaetigen."
+    accept_button: "&a[Annehmen]"
+    deny_button: " &c[Ablehnen]"
+    response_prefix: "&7Antwort: "
+    open_invites_hint: "&7Öffne &f/clan invites &7oder nutze &a/clan accept <id>&7."
+    request_saved: "&7Anfrage gespeichert. &fOfficer/Leader &7muss genehmigen."
+    joined: "&aDu bist dem Clan &f{clan} &8[&b{tag}&8] &abeigetreten."
+    not_found: "&cInvite nicht gefunden oder abgelaufen."
+    approval_accepted: "&aAnfrage angenommen."
+    target_approved: "&aDeine Clan-Anfrage wurde genehmigt."
+    denied: "&7Anfrage abgelehnt."
+    target_denied: "&cDeine Clan-Anfrage wurde abgelehnt."
+    fail: "&cFehler beim Inviten. Console."
+    accept_fail: "&cFehler beim Annehmen. Console."
+    deny_fail: "&cFehler beim Ablehnen. Console."
+    request_new: "&7Neue Clan-Anfrage: &f{player}"
+    request_from: "&7Eingeladen von: &f{player}"
+    request_action: "&7Nutze &f/clan invites &7zum Bearbeiten."
+
+  broadcasts:
+    join: "&a{player} &7ist dem Clan beigetreten."
+    leave: "&7{player} &chat den Clan verlassen."
+    disband: "&cClan wurde aufgeloest."
+
+  leave:
+    leader_cannot: "&cDu bist Leader. Disband/Transfer kommt (oder manuell)."
+    success: "&aDu hast den Clan verlassen."
+    fail: "&cFehler beim Verlassen. Console."
+
+  disband:
+    only_leader: "&cNur der Leader kann disbanden."
+    success: "&cClan wurde aufgelöst."
+    fail: "&cFehler beim Disband. Console."
+
+  motd:
+    saved: "&aMOTD gespeichert."
+    changed_broadcast: "&7MOTD wurde von &f{player} &7geaendert."
+    prompt: "&7Schreib neue MOTD in den Chat. &8(&fcancel&8 zum Abbrechen)"
+    cancelled: "&7Abgebrochen."
+    fail: "&cFehler beim Speichern. Console."
+
+  open_invite:
+    status: "&7Open Invite: {status}"
+    on: "&aAN"
+    off: "&cAUS"
+    changed_broadcast: "&7Open Invite wurde von &f{player} &7auf {status}&7 gestellt."
+    fail: "&cFehler beim Toggle. Console."
+
+  tag_style:
+    saved: "&aTag-Style gespeichert."
+    changed_broadcast: "&7Clan-Tag Style wurde von &f{player} &7geaendert."
+    fail: "&cFehler. Console."
+
+  chat_suffix:
+    saved: "&aSuffix gespeichert."
+    removed: "&7Suffix entfernt."
+    fail: "&cFehler. Console."
+
+  promote:
+    only_leader: "&cNur der Leader kann promoten."
+    only_member: "&cDer Spieler ist nicht Member."
+    success_actor: "&aSpieler wurde zu &bOFFICER &apromoted."
+    success_target: "&aDu wurdest zu &bOFFICER &abefördert."
+    broadcast: "&b{player} &7wurde von &f{actor} &7zu &bOFFICER &7befoerdert."
+    fail: "&cFehler beim Promoten. Console."
+
+  demote:
+    only_leader: "&cNur der Leader kann demoten."
+    only_officer: "&cDer Spieler ist kein Officer."
+    success_actor: "&aSpieler wurde zu &7MEMBER &agedemoted."
+    success_target: "&cDu wurdest zu &7MEMBER &czurückgestuft."
+    broadcast: "&7{player} &7wurde von &f{actor} &7zu &7MEMBER &7gedemoted."
+    fail: "&cFehler beim Demoten. Console."
+
+  kick:
+    cannot_self: "&cDu kannst dich nicht selbst kicken."
+    cannot_leader: "&cDu kannst den Leader nicht kicken."
+    no_rights: "&cKeine Rechte zum Kicken."
+    only_member: "&cDu kannst nur Member kicken."
+    success_actor: "&aSpieler wurde gekickt."
+    success_target: "&cDu wurdest aus dem Clan gekickt."
+    broadcast: "&c{player} &7wurde von &f{actor} &7gekickt."
+    fail: "&cFehler beim Kicken. Console."
+
+  clan_chat:
+    tag_prefix: "&8[&b{tag}&8] &b"
+    format: "{prefix}{player} &8» &f{message}"
+    fallback_format: "&bClan &8» &f{player}&7: &f{message}"
+
+  chat:
+    tag_suffix: " &8[&r{style}{tag}&8]&r"
+    hover: "&7Rang: {role_color}{role}"
+    clan_prefix: "&d&lC &8| &f"
+    clan_message_tail: " &8» &d{message}"
+    global_no_clan_format: "&7%1$s &8» &7%2$s"
+    global_with_clan_format: "&f%1$s{suffix} &8» &7%2$s"
+
+  update:
+    header: "&8━━━━━━━━━━━━━━&e&l StarClans &6Update&8 ━━━━━━━━━━━━━━"
+    current: "&7Deine Version: &c{version}"
+    latest: "&7Neue Version: &a{version}"
+    action: "&7Lade jetzt herunter oder kopiere die Version."
+    download: "⤓ Download"
+    download_hover: "Öffnet die Download-Seite"
+    copy: "⎘ Version kopieren"
+    copy_hover: "Kopiert die neue Version"
+    footer: "&8━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+
+gui:
+  main:
+    title: "&b&lStarClans &8✦ &fClan Menü"
+    cost:
+      free: "&8• &fKosten: &aGratis"
+      amount: "&8• &fKosten: &6{cost}"
+      vault_missing: "&8• &fKosten: &cVault/Eco fehlt!"
+    create:
+      name: "&a&lClan erstellen"
+      lore:
+        - "&7Erstelle deinen eigenen Clan"
+        - ""
+        - "{cost_line}"
+        - ""
+        - "&7Klick zum Starten"
+    invites:
+      name: "&e&lEinladungen"
+      lore:
+        - "&7Sieh deine offenen Invites"
+        - ""
+        - "{invites_line}"
+        - ""
+        - "&7Klick zum Öffnen"
+      lore_in_clan:
+        - "&7Offene Invites"
+        - ""
+        - "{invites_line}"
+        - ""
+        - "&7Klick zum Öffnen"
+      none: "&8• &fEinladungen: &7Keine"
+      some: "&8• &fEinladungen: &a{count}"
+    close:
+      name: "&c&lSchließen"
+      lore:
+        - "&7Menü schließen"
+    my_clan:
+      name: "&b&lMein Clan"
+      lore:
+        - "&7Name: &f{clan_name}"
+        - "&7Tag: &b{clan_tag}"
+        - "&7Rolle: &f{role}"
+        - "&7Mitglieder: &f{members}"
+        - ""
+        - "&7Klick für Clan-Manage"
+    members:
+      name: "&d&lMitglieder"
+      lore:
+        - "&7Mitglieder anzeigen"
+        - "&7und Rollen später verwalten"
+        - ""
+        - "&7Klick zum Öffnen"
+    chat_toggle:
+      on: "&a&lClan Chat: AN"
+      off: "&c&lClan Chat: AUS"
+      lore:
+        - "&7Toggle Clan-Chat Modus"
+        - ""
+        - "&7Klick zum Umschalten"
+
+  create:
+    title: "&a&lClan erstellen"
+    current:
+      none: "&7-"
+    set_name:
+      name: "&b&lName setzen"
+      lore:
+        - "&7Aktuell: &f{current}"
+        - ""
+        - "&7Klick und schreib den Namen in den Chat"
+    set_tag:
+      name: "&d&lTag setzen"
+      lore:
+        - "&7Aktuell: &f{current}"
+        - ""
+        - "&7Klick und schreib den Tag in den Chat"
+    tag_preview_fallback: "TAG"
+    tag_style:
+      name: "&d&lTag Style"
+      lore:
+        - "&7Aktuell: &8[&r{styled}&8]"
+        - ""
+        - "&7Klick zum Öffnen"
+    confirm:
+      name: "&7&lBestätigen"
+      ready_name: "&a&lBestätigen"
+      lore:
+        - "&7Erstellt den Clan mit Name/Tag"
+        - ""
+        - "{status}"
+      ready_status: "&aBereit"
+      not_ready_status: "&cSetze erst Name und Tag"
+    cancel:
+      name: "&c&lAbbrechen"
+      lore:
+        - "&7Zurück ins Menü"
+
+  invites:
+    title: "&e&lEinladungen"
+    back:
+      name: "&c&lZurück"
+      lore:
+        - "&7Zurück zum Clan-Menü"
+    request:
+      name: "&e&lAnfrage: &f{player}"
+      lore:
+        - "&7Eingeladen von: &f{inviter} &8({role_color}{role}&8)"
+        - ""
+        - "&7Klick: &aAnnehmen"
+        - "&7Shift-Klick: &cAblehnen"
+    invite:
+      name: "&e&lInvite: &f{clan} &8[&b{tag}&8]"
+      lore:
+        - "&7Eingeladen von: &f{inviter} &8({role_color}{role}&8)"
+        - ""
+        - "&7Klick: &aAnnehmen"
+        - "&7Shift-Klick: &cAblehnen"
+
+  members:
+    title: "&b&lClan &8| &fMembers"
+    glass: "&8 "
+    back: "&cZurück"
+    prev: "&7Vorherige Seite"
+    next: "&7Nächste Seite"
+    status:
+      online: "&aOnline"
+      offline: "&7Offline"
+    member:
+      name: "&f{name}"
+      lore:
+        - "&8"
+        - "&7Rang: {role_color}{role}"
+        - "&7Status: {status}"
+        - "&8"
+        - "&bKlick &7für Management"
+    header:
+      name: "&b&l{clan} &8[&f{tag}&8]"
+      lore:
+        - "&8"
+        - "&7Mitglieder: &f{members}"
+        - "&7Seite: &f{page}"
+        - "&8"
+        - "&7Tipp: &fLeader/Officer können verwalten"
+
+  member_manage:
+    title: "&b&lMember &8| &fManage"
+    glass: "&8 "
+    back: "&cZurück"
+    locked: "&cKeine Rechte"
+    head:
+      name: "&f{name}"
+      lore:
+        - "&8"
+        - "&7Rang: {role_color}{role}"
+        - "&8"
+    promote: "&aPromote &8→ &bOFFICER"
+    demote: "&eDemote &8→ &7MEMBER"
+    kick: "&cKick"
+
+  settings:
+    title: "&b&lClan &8| &fManage"
+    glass: "&8 "
+    back: "&cZurück"
+    locked: "&cKeine Rechte"
+    open_invite:
+      name: "&bOpen Invite"
+    motd:
+      name: "&eMOTD bearbeiten"
+      none: "&8(keine)"
+      lore:
+        - "&8"
+        - "&7Aktuell:"
+        - "&f{motd}"
+        - "&8"
+        - "&bKlick &7zum Bearbeiten"
+    toggle:
+      on: "&aAN"
+      off: "&7AUS"
+      lore:
+        - "&8"
+        - "&7Status: {status}"
+        - "&8"
+        - "&bKlick &7zum togglen"
+    tag_styler:
+      name: "&dTag Styler"
+      lore:
+        - "&8"
+        - "&7Tag-Farben & Style"
+        - "&8"
+        - "&bKlick &7zum Öffnen"
+    members:
+      name: "&bMitglieder"
+      lore:
+        - "&8"
+        - "&7Mitglieder verwalten"
+        - "&8"
+        - "&bKlick &7zum Öffnen"
+    invites:
+      name: "&eEinladungen"
+      lore:
+        - "&8"
+        - "&7Anfragen annehmen/ablehnen"
+        - "&8"
+        - "&bKlick &7zum Öffnen"
+    disband:
+      name: "&cClan löschen"
+      lore:
+        - "&8"
+        - "&7Löscht den Clan dauerhaft"
+        - "&8"
+        - "&cKlick &7zum Auflösen"
+
+  tag_style:
+    title: "&d&lClan &8| &fTag Styler"
+    glass: "&r"
+    bold:
+      on: "&a&lFett: AN"
+      off: "&7Fett: AUS"
+      lore:
+        - "&7Togglest &lBold &7für den Tag"
+    reset:
+      name: "&7Reset"
+      lore:
+        - "&7Setzt Style auf Standard"
+    save:
+      name: "&a&lSpeichern"
+      lore:
+        - "&7Speichert den Tag-Style"
+    back:
+      name: "&cZurück"
+      lore:
+        - "&7Zurück ins Clan-Menü"
+    create_back:
+      name: "&cZurück"
+      lore:
+        - "&7Zurück zum Erstellen"
+    preview:
+      name: "&d&lPreview"
+      lore_clan:
+        - "&8"
+        - "&7Suffix: &8[&r{styled}&8]"
+        - "&8"
+      lore_create:
+        - "&8"
+        - "&7Tag: &8[&r{styled}&8]"
+        - "&8"
+        - "&7Wird beim Erstellen gespeichert"
+    color:
+      selected: "&aAusgewählt"
+      select: "&7Klick zum Auswählen"
+    colors:
+      black: "&0Schwarz"
+      gray: "&8Grau"
+      light_gray: "&7Hellgrau"
+      white: "&fWeiß"
+      red: "&cRot"
+      orange: "&6Orange"
+      yellow: "&eGelb"
+      lime: "&aHellgrün"
+      green: "&2Grün"
+      light_blue: "&bHellblau"
+      cyan: "&3Cyan"
+      blue: "&9Blau"
+      magenta: "&dMagenta"
+      purple: "&5Lila"
+      brown: "&4Braun"
+      dark_blue: "&1Dunkelblau"
+
+placeholders:
+  none: "(-)"
+  name_formatted: "&b{name} &8(&f{members}&8)"
+  tag_suffix: "&8[&r{style}{tag}&8]&r"

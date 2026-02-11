@@ -56,14 +56,14 @@ public final class StarClansExpansion extends PlaceholderExpansion {
             case "name" -> p != null && p.inClan ? p.clanName : clanNameFallback(player.getUniqueId());
             case "name_formatted" -> {
                 if (p != null && p.inClan) {
-                    yield "§b" + p.clanName + " §8(" + "§f" + p.memberCount + "§8)";
+                    yield plugin.lang().get("placeholders.name_formatted", "name", p.clanName, "members", p.memberCount);
                 }
                 long clanId = clanIdFallback(player.getUniqueId());
-                if (clanId <= 0) yield "(-)";
+                if (clanId <= 0) yield plugin.lang().get("placeholders.none");
                 String name = clanNameFallback(player.getUniqueId());
-                if (name.isEmpty()) yield "(-)";
+                if (name.isEmpty()) yield plugin.lang().get("placeholders.none");
                 int members = memberCountFallback(clanId);
-                yield "§b" + name + " §8(" + "§f" + members + "§8)";
+                yield plugin.lang().get("placeholders.name_formatted", "name", name, "members", members);
             }
             case "tag" -> p != null && p.inClan ? p.clanTag : clanTagFallback(player.getUniqueId());
             case "role" -> p != null && p.inClan ? prettyRole(p.role.name()) : "";
@@ -103,7 +103,7 @@ public final class StarClansExpansion extends PlaceholderExpansion {
             String style = cos.tagStyle == null || cos.tagStyle.isEmpty() ? "§b" : cos.tagStyle;
             String t = tag == null ? "" : tag;
             if (t.isEmpty()) return "";
-            return "§8[§r" + style + t + "§8]§r";
+            return plugin.lang().get("placeholders.tag_suffix", "style", style, "tag", t);
         } catch (Exception e) {
             return "";
         }
@@ -147,9 +147,9 @@ public final class StarClansExpansion extends PlaceholderExpansion {
 
     private String prettyRole(String role) {
         return switch (role) {
-            case "LEADER" -> "Leader";
-            case "OFFICER" -> "Officer";
-            default -> "Member";
+            case "LEADER" -> plugin.lang().role(dev.eministar.starclans.model.MemberRole.LEADER);
+            case "OFFICER" -> plugin.lang().role(dev.eministar.starclans.model.MemberRole.OFFICER);
+            default -> plugin.lang().role(dev.eministar.starclans.model.MemberRole.MEMBER);
         };
     }
 }

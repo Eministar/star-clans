@@ -10,6 +10,7 @@ import dev.eministar.starclans.listener.ProfilePreloadListener;
 import dev.eministar.starclans.placeholder.StarClansExpansion;
 import dev.eministar.starclans.service.ClanService;
 import dev.eministar.starclans.utils.Banner;
+import dev.eministar.starclans.utils.Lang;
 import dev.eministar.starclans.utils.UpdateChecker;
 import dev.eministar.starclans.utils.Version;
 import dev.eministar.starclans.vault.VaultHook;
@@ -20,6 +21,7 @@ public final class StarClans extends JavaPlugin {
 
     private ClanRepository repo;
     private ClanService service;
+    private Lang lang;
 
     private ClanMainMenu mainMenu;
     private ClanCreateMenu createMenu;
@@ -32,6 +34,7 @@ public final class StarClans extends JavaPlugin {
     @Override
     public void onEnable() {
         saveDefaultConfig();
+        this.lang = new Lang(this);
 
         Version.init(this);
         UpdateChecker.check(this);
@@ -105,5 +108,9 @@ public final class StarClans extends JavaPlugin {
 
     public ClanService service() {
         return service;
+    }
+
+    public Lang lang() {
+        return lang;
     }
 }

@@ -2,7 +2,6 @@ package dev.eministar.starclans.gui;
 
 import dev.eministar.starclans.StarClans;
 import dev.eministar.starclans.service.ClanService;
-import dev.eministar.starclans.utils.StarPrefix;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
@@ -20,7 +19,6 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.persistence.PersistentDataType;
 
-import java.util.Arrays;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
@@ -32,7 +30,7 @@ public final class ClanCreateMenu implements Listener {
     private final ClanTagStyleMenu tagStyleMenu;
 
     private final NamespacedKey actionKey;
-    private final String title = "§a§lClan erstellen";
+    private String title;
 
     private final Map<UUID, ClanService.CreateState> state = new ConcurrentHashMap<>();
     private final Map<UUID, String> awaiting = new ConcurrentHashMap<>();
@@ -42,12 +40,13 @@ public final class ClanCreateMenu implements Listener {
         this.service = service;
         this.tagStyleMenu = tagStyleMenu;
         this.actionKey = new NamespacedKey(plugin, "sc_action");
+        this.title = plugin.lang().get("gui.create.title");
     }
 
     public void open(Player p) {
         service.loadProfileAsync(p.getUniqueId(), prof -> {
             if (prof != null && prof.inClan) {
-                p.sendMessage(StarPrefix.PREFIX + "§cDu bist bereits in einem Clan.");
+                p.sendMessage(plugin.lang().prefixed("messages.already_in_clan"));
                 return;
             }
             state.put(p.getUniqueId(), new ClanService.CreateState());
@@ -56,6 +55,7 @@ public final class ClanCreateMenu implements Listener {
     }
 
     private void openView(Player p) {
+        this.title = plugin.lang().get("gui.create.title");
         ClanService.CreateState s = state.get(p.getUniqueId());
         if (s == null) {
             s = new ClanService.CreateState();
@@ -70,25 +70,30 @@ public final class ClanCreateMenu implements Listener {
         inv.setItem(17, pane(Material.BLACK_STAINED_GLASS_PANE));
         for (int i = 18; i <= 26; i++) inv.setItem(i, pane(Material.BLACK_STAINED_GLASS_PANE));
 
-        inv.setItem(11, button(Material.NAME_TAG, "§b§lName setzen",
-                Arrays.asList("§7Aktuell: §f" + (s.name.isEmpty() ? "§7-" : s.name), "", "§7Klick und schreib den Namen in den Chat"),
+        inv.setItem(11, button(Material.NAME_TAG, plugin.lang().get("gui.create.set_name.name"),
+                plugin.lang().getList("gui.create.set_name.lore",
+                        "current", s.name.isEmpty() ? plugin.lang().get("gui.create.current.none") : s.name),
                 "SET_NAME", true));
 
-        inv.setItem(13, button(Material.PAPER, "§d§lTag setzen",
-                Arrays.asList("§7Aktuell: §f" + (s.tag.isEmpty() ? "§7-" : s.tag), "", "§7Klick und schreib den Tag in den Chat"),
+        inv.setItem(13, button(Material.PAPER, plugin.lang().get("gui.create.set_tag.name"),
+                plugin.lang().getList("gui.create.set_tag.lore",
+                        "current", s.tag.isEmpty() ? plugin.lang().get("gui.create.current.none") : s.tag),
                 "SET_TAG", true));
 
-        String styled = (s.tagStyle.isEmpty() ? "§b" : s.tagStyle) + (s.tag.isEmpty() ? "TAG" : s.tag) + "§r";
-        inv.setItem(14, button(Material.NETHER_STAR, "§d§lTag Style",
-                Arrays.asList("§7Aktuell: §8[§r" + styled + "§8]", "", "§7Klick zum Öffnen"),
+        String styled = (s.tagStyle.isEmpty() ? "§b" : s.tagStyle) + (s.tag.isEmpty() ? plugin.lang().get("gui.create.tag_preview_fallback") : s.tag) + "§r";
+        inv.setItem(14, button(Material.NETHER_STAR, plugin.lang().get("gui.create.tag_style.name"),
+                plugin.lang().getList("gui.create.tag_style.lore", "styled", styled),
                 "TAG_STYLE", !s.tagStyle.isEmpty()));
 
         boolean ready = !s.name.isEmpty() && !s.tag.isEmpty();
-        inv.setItem(15, button(Material.EMERALD_BLOCK, ready ? "§a§lBestätigen" : "§7§lBestätigen",
-                Arrays.asList("§7Erstellt den Clan mit Name/Tag", "", ready ? "§aBereit" : "§cSetze erst Name und Tag"),
+        inv.setItem(15, button(Material.EMERALD_BLOCK,
+                plugin.lang().get(ready ? "gui.create.confirm.ready_name" : "gui.create.confirm.name"),
+                plugin.lang().getList("gui.create.confirm.lore",
+                        "status", plugin.lang().get(ready ? "gui.create.confirm.ready_status" : "gui.create.confirm.not_ready_status")),
                 "CONFIRM", ready));
 
-        inv.setItem(22, button(Material.BARRIER, "§c§lAbbrechen", Arrays.asList("§7Zurück ins Menü"), "CANCEL", false));
+        inv.setItem(22, button(Material.BARRIER, plugin.lang().get("gui.create.cancel.name"),
+                plugin.lang().getList("gui.create.cancel.lore"), "CANCEL", false));
 
         p.openInventory(inv);
         p.playSound(p.getLocation(), Sound.UI_BUTTON_CLICK, 0.7f, 1.25f);
@@ -119,7 +124,7 @@ public final class ClanCreateMenu implements Listener {
         if (action.equals("SET_NAME")) {
             awaiting.put(p.getUniqueId(), "NAME");
             p.closeInventory();
-            p.sendMessage(StarPrefix.PREFIX + "§7Schreib jetzt den §fClan-Namen §7in den Chat. §8(/clan cancel)");
+            p.sendMessage(plugin.lang().prefixed("messages.create.prompt_name"));
             p.playSound(p.getLocation(), Sound.UI_BUTTON_CLICK, 0.8f, 1.4f);
             return;
         }
@@ -127,7 +132,7 @@ public final class ClanCreateMenu implements Listener {
         if (action.equals("SET_TAG")) {
             awaiting.put(p.getUniqueId(), "TAG");
             p.closeInventory();
-            p.sendMessage(StarPrefix.PREFIX + "§7Schreib jetzt den §fClan-Tag §7in den Chat. §8(/clan cancel)");
+            p.sendMessage(plugin.lang().prefixed("messages.create.prompt_tag"));
             p.playSound(p.getLocation(), Sound.UI_BUTTON_CLICK, 0.8f, 1.4f);
             return;
         }
@@ -151,7 +156,7 @@ public final class ClanCreateMenu implements Listener {
                 return;
             }
             p.closeInventory();
-            service.tryCreateClan(p, s.name, s.tag, s.tagStyle, msg -> p.sendMessage(StarPrefix.PREFIX + msg));
+            service.tryCreateClan(p, s.name, s.tag, s.tagStyle, msg -> p.sendMessage(plugin.lang().prefixedRaw(msg)));
             state.remove(p.getUniqueId());
             awaiting.remove(p.getUniqueId());
         }
@@ -178,7 +183,7 @@ public final class ClanCreateMenu implements Listener {
                 if (mode.equals("NAME")) {
                     s.name = msg;
                     awaiting.remove(p.getUniqueId());
-                    p.sendMessage(StarPrefix.PREFIX + "§aName gesetzt: §f" + msg);
+                    p.sendMessage(plugin.lang().prefixed("messages.create.name_set", "name", msg));
                     openView(p);
                     return;
                 }
@@ -186,7 +191,7 @@ public final class ClanCreateMenu implements Listener {
                 if (mode.equals("TAG")) {
                     s.tag = msg.toUpperCase();
                     awaiting.remove(p.getUniqueId());
-                    p.sendMessage(StarPrefix.PREFIX + "§aTag gesetzt: §f" + s.tag);
+                    p.sendMessage(plugin.lang().prefixed("messages.create.tag_set", "tag", s.tag));
                     openView(p);
                 }
             }

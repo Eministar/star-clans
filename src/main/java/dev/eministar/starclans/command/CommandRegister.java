@@ -24,7 +24,7 @@ public final class CommandRegister {
             throw new IllegalStateException("Command 'clan' not found in plugin.yml");
         }
 
-        clan.setExecutor(new ClanCommand(service, repo, mainMenu, createMenu, invitesMenu, membersMenu, manageMenu, tagStyleMenu, settingsMenu));
+        clan.setExecutor(new ClanCommand(plugin, service, repo, mainMenu, createMenu, invitesMenu, membersMenu, manageMenu, tagStyleMenu, settingsMenu));
         clan.setTabCompleter(new ClanTabCompleter());
     }
 

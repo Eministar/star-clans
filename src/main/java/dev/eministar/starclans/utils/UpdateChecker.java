@@ -25,10 +25,14 @@ public final class UpdateChecker {
     private static volatile String currentVersion;
     private static volatile boolean updateAvailable;
     private static volatile boolean listenerRegistered;
+    private static volatile Lang lang;
 
     private UpdateChecker() {}
 
     public static void check(JavaPlugin plugin) {
+        if (plugin instanceof dev.eministar.starclans.StarClans sc) {
+            lang = sc.lang();
+        }
         registerJoinListener(plugin);
         Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
             String latest = fetchLatestVersion();
@@ -76,31 +80,35 @@ public final class UpdateChecker {
     }
 
     private static void sendUpdateMessage(Player player, String current, String latest) {
-        player.sendMessage(ChatColor.DARK_GRAY + "━━━━━━━━━━━━━━" + ChatColor.YELLOW
+        String header = lang != null ? lang.get("messages.update.header") : ChatColor.DARK_GRAY + "━━━━━━━━━━━━━━" + ChatColor.YELLOW
                 + ChatColor.BOLD + " StarClans " + ChatColor.GOLD + "Update"
-                + ChatColor.DARK_GRAY + " ━━━━━━━━━━━━━━");
-        player.sendMessage(ChatColor.GRAY + "Deine Version: " + ChatColor.RED + current);
-        player.sendMessage(ChatColor.GRAY + "Neue Version: " + ChatColor.GREEN + latest);
-        player.sendMessage(ChatColor.GRAY + "Lade jetzt herunter oder kopiere die Version.");
+                + ChatColor.DARK_GRAY + " ━━━━━━━━━━━━━━";
+        player.sendMessage(header);
+        player.sendMessage(lang != null ? lang.get("messages.update.current", "version", current)
+                : ChatColor.GRAY + "Deine Version: " + ChatColor.RED + current);
+        player.sendMessage(lang != null ? lang.get("messages.update.latest", "version", latest)
+                : ChatColor.GRAY + "Neue Version: " + ChatColor.GREEN + latest);
+        player.sendMessage(lang != null ? lang.get("messages.update.action")
+                : ChatColor.GRAY + "Lade jetzt herunter oder kopiere die Version.");
 
-        TextComponent download = new TextComponent("⤓ Download");
+        TextComponent download = new TextComponent(lang != null ? lang.get("messages.update.download") : "⤓ Download");
         download.setColor(ChatColor.AQUA);
         download.setBold(true);
         download.setClickEvent(new ClickEvent(ClickEvent.Action.OPEN_URL, PLUGIN_URL));
         download.setHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT,
-                new ComponentBuilder("Öffnet die Download-Seite").color(ChatColor.GRAY).create()));
+                new ComponentBuilder(lang != null ? lang.get("messages.update.download_hover") : "Öffnet die Download-Seite").color(ChatColor.GRAY).create()));
 
         TextComponent spacer = new TextComponent("  ");
 
-        TextComponent copy = new TextComponent("⎘ Version kopieren");
+        TextComponent copy = new TextComponent(lang != null ? lang.get("messages.update.copy") : "⎘ Version kopieren");
         copy.setColor(ChatColor.GOLD);
         copy.setBold(true);
         copy.setClickEvent(new ClickEvent(ClickEvent.Action.COPY_TO_CLIPBOARD, latest));
         copy.setHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT,
-                new ComponentBuilder("Kopiert die neue Version").color(ChatColor.GRAY).create()));
+                new ComponentBuilder(lang != null ? lang.get("messages.update.copy_hover") : "Kopiert die neue Version").color(ChatColor.GRAY).create()));
 
         player.spigot().sendMessage(download, spacer, copy);
-        player.sendMessage(ChatColor.DARK_GRAY + "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+        player.sendMessage(lang != null ? lang.get("messages.update.footer") : ChatColor.DARK_GRAY + "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
     }
 
     private static HttpURLConnection openConnectionFollowRedirects(String url) {

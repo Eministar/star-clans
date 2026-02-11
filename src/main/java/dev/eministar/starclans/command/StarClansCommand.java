@@ -4,7 +4,6 @@ import dev.eministar.starclans.StarClans;
 import dev.eministar.starclans.database.HikariProvider;
 import dev.eministar.starclans.database.SQL;
 import dev.eministar.starclans.service.ClanService;
-import dev.eministar.starclans.utils.StarPrefix;
 import dev.eministar.starclans.vault.VaultHook;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
@@ -23,21 +22,22 @@ public final class StarClansCommand implements CommandExecutor {
     @Override
     public boolean onCommand(CommandSender sender, Command cmd, String label, String[] args) {
         if (args.length == 0) {
-            sender.sendMessage(StarPrefix.PREFIX + "§7Nutze: §f/starclans reload");
+            sender.sendMessage(plugin.lang().prefixed("messages.use.starclans_reload"));
             return true;
         }
 
         if (!args[0].equalsIgnoreCase("reload")) {
-            sender.sendMessage(StarPrefix.PREFIX + "§7Nutze: §f/starclans reload");
+            sender.sendMessage(plugin.lang().prefixed("messages.use.starclans_reload"));
             return true;
         }
 
         if (!sender.hasPermission("starclans.admin.reload")) {
-            sender.sendMessage(StarPrefix.PREFIX + "§cKeine Rechte.");
+            sender.sendMessage(plugin.lang().prefixed("messages.no_permission"));
             return true;
         }
 
         plugin.reloadConfig();
+        plugin.lang().reload();
         VaultHook.init(plugin);
 
         HikariProvider.shutdown();
@@ -47,14 +47,14 @@ public final class StarClansCommand implements CommandExecutor {
             try {
                 SQL.initSchema(HikariProvider.get());
             } catch (Exception e) {
-                sender.sendMessage(StarPrefix.PREFIX + "§cDB Schema init failed. Console.");
+                sender.sendMessage(plugin.lang().prefixed("messages.db_schema_failed"));
                 e.printStackTrace();
                 return true;
             }
         }
 
         service.clearCache();
-        sender.sendMessage(StarPrefix.PREFIX + "§aReload done. §7Config/Vault/DB refreshed.");
+        sender.sendMessage(plugin.lang().prefixed("messages.reload_done"));
         return true;
     }
 }

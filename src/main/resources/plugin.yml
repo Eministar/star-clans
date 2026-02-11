@@ -11,11 +11,12 @@ commands:
   clan:
     description: Opens the StarClans menu
     usage: /clan
-    aliases: [clans]
+    aliases: [ clans ]
   starclans:
     description: StarClans admin command
     usage: /starclans reload
     aliases: [ sc ]
+
 permissions:
   starclans.admin.reload:
     default: op

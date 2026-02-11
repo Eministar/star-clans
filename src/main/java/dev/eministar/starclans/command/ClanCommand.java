@@ -1,15 +1,16 @@
 package dev.eministar.starclans.command;
 
+import dev.eministar.starclans.StarClans;
 import dev.eministar.starclans.database.ClanRepository;
 import dev.eministar.starclans.gui.*;
 import dev.eministar.starclans.service.ClanService;
-import dev.eministar.starclans.utils.StarPrefix;
 import org.bukkit.Bukkit;
 import org.bukkit.command.*;
 import org.bukkit.entity.Player;
 
 public final class ClanCommand implements CommandExecutor {
 
+    private final StarClans plugin;
     private final ClanService service;
     private final ClanRepository repo;
     private final ClanMainMenu mainMenu;
@@ -20,7 +21,8 @@ public final class ClanCommand implements CommandExecutor {
     private final ClanSettingsMenu settingsMenu;
     private final ClanTagStyleMenu tagStyleMenu;
 
-    public ClanCommand(ClanService service,
+    public ClanCommand(StarClans plugin,
+                       ClanService service,
                        ClanRepository repo,
                        ClanMainMenu mainMenu,
                        ClanCreateMenu createMenu,
@@ -29,6 +31,7 @@ public final class ClanCommand implements CommandExecutor {
                        ClanMemberManageMenu manageMenu,
                        ClanTagStyleMenu tagStyleMenu,
                        ClanSettingsMenu settingsMenu) {
+        this.plugin = plugin;
         this.service = service;
         this.repo = repo;
         this.mainMenu = mainMenu;
@@ -43,7 +46,7 @@ public final class ClanCommand implements CommandExecutor {
     @Override
     public boolean onCommand(CommandSender sender, Command cmd, String label, String[] args) {
         if (!(sender instanceof Player p)) {
-            sender.sendMessage("[StarClans] Player only.");
+            sender.sendMessage(plugin.lang().prefixed("messages.player_only"));
             return true;
         }
 
@@ -64,18 +67,18 @@ public final class ClanCommand implements CommandExecutor {
                 }
                 Player t = Bukkit.getPlayerExact(args[1]);
                 if (t == null) {
-                    p.sendMessage(StarPrefix.PREFIX + "§cSpieler nicht online.");
+                    p.sendMessage(plugin.lang().prefixed("messages.not_online"));
                     return true;
                 }
                 manageMenu.open(p, t.getUniqueId());
             }
             case "manage" -> service.loadProfileAsync(p.getUniqueId(), prof -> {
                 if (prof == null || !prof.inClan) {
-                    p.sendMessage(StarPrefix.PREFIX + "§cDu bist in keinem Clan.");
+                    p.sendMessage(plugin.lang().prefixed("messages.not_in_clan"));
                     return;
                 }
                 if (prof.role != dev.eministar.starclans.model.MemberRole.LEADER) {
-                    p.sendMessage(StarPrefix.PREFIX + "§cNur der Leader kann Clan-Manage öffnen.");
+                    p.sendMessage(plugin.lang().prefixed("messages.only_leader_manage"));
                     return;
                 }
                 settingsMenu.open(p);
@@ -85,88 +88,88 @@ public final class ClanCommand implements CommandExecutor {
 
             case "chat" -> {
                 boolean on = service.toggleClanChat(p.getUniqueId());
-                p.sendMessage(StarPrefix.PREFIX + (on ? "§aClan-Chat aktiviert." : "§7Clan-Chat deaktiviert."));
+                p.sendMessage(plugin.lang().prefixed(on ? "messages.clan_chat_on" : "messages.clan_chat_off"));
             }
 
             case "invite" -> {
                 if (args.length < 2) {
-                    p.sendMessage(StarPrefix.PREFIX + "§7Nutze: §f/clan invite <Spieler>");
+                    p.sendMessage(plugin.lang().prefixed("messages.use.clan_invite"));
                     return true;
                 }
                 Player t = Bukkit.getPlayerExact(args[1]);
                 if (t == null) {
-                    p.sendMessage(StarPrefix.PREFIX + "§cSpieler nicht online.");
+                    p.sendMessage(plugin.lang().prefixed("messages.not_online"));
                     return true;
                 }
-                service.invite(p, t, s -> p.sendMessage(StarPrefix.PREFIX + s));
+                service.invite(p, t, s -> p.sendMessage(plugin.lang().prefixedRaw(s)));
             }
 
             case "accept" -> {
                 if (args.length < 2) {
-                    p.sendMessage(StarPrefix.PREFIX + "§7Nutze: §f/clan accept <id>");
+                    p.sendMessage(plugin.lang().prefixed("messages.use.clan_accept"));
                     return true;
                 }
                 long id;
                 try { id = Long.parseLong(args[1]); } catch (Exception ex) {
-                    p.sendMessage(StarPrefix.PREFIX + "§cUngültige ID.");
+                    p.sendMessage(plugin.lang().prefixed("messages.invalid_id"));
                     return true;
                 }
-                service.acceptInvite(p, id, s -> p.sendMessage(StarPrefix.PREFIX + s));
+                service.acceptInvite(p, id, s -> p.sendMessage(plugin.lang().prefixedRaw(s)));
             }
 
             case "deny" -> {
                 if (args.length < 2) {
-                    p.sendMessage(StarPrefix.PREFIX + "§7Nutze: §f/clan deny <id>");
+                    p.sendMessage(plugin.lang().prefixed("messages.use.clan_deny"));
                     return true;
                 }
                 long id;
                 try { id = Long.parseLong(args[1]); } catch (Exception ex) {
-                    p.sendMessage(StarPrefix.PREFIX + "§cUngültige ID.");
+                    p.sendMessage(plugin.lang().prefixed("messages.invalid_id"));
                     return true;
                 }
-                service.denyInvite(p, id, s -> p.sendMessage(StarPrefix.PREFIX + s));
+                service.denyInvite(p, id, s -> p.sendMessage(plugin.lang().prefixedRaw(s)));
             }
 
-            case "leave" -> service.leave(p, s -> p.sendMessage(StarPrefix.PREFIX + s));
-            case "disband" -> service.disband(p, s -> p.sendMessage(StarPrefix.PREFIX + s));
+            case "leave" -> service.leave(p, s -> p.sendMessage(plugin.lang().prefixedRaw(s)));
+            case "disband" -> service.disband(p, s -> p.sendMessage(plugin.lang().prefixedRaw(s)));
 
             case "kick" -> {
                 if (args.length < 2) {
-                    p.sendMessage(StarPrefix.PREFIX + "§7Nutze: §f/clan kick <Spieler>");
+                    p.sendMessage(plugin.lang().prefixed("messages.use.clan_kick"));
                     return true;
                 }
                 Player t = Bukkit.getPlayerExact(args[1]);
                 if (t == null) {
-                    p.sendMessage(StarPrefix.PREFIX + "§cSpieler nicht online.");
+                    p.sendMessage(plugin.lang().prefixed("messages.not_online"));
                     return true;
                 }
-                service.kick(p, t.getUniqueId(), s -> p.sendMessage(StarPrefix.PREFIX + s));
+                service.kick(p, t.getUniqueId(), s -> p.sendMessage(plugin.lang().prefixedRaw(s)));
             }
 
             case "promote" -> {
                 if (args.length < 2) {
-                    p.sendMessage(StarPrefix.PREFIX + "§7Nutze: §f/clan promote <Spieler>");
+                    p.sendMessage(plugin.lang().prefixed("messages.use.clan_promote"));
                     return true;
                 }
                 Player t = Bukkit.getPlayerExact(args[1]);
                 if (t == null) {
-                    p.sendMessage(StarPrefix.PREFIX + "§cSpieler nicht online.");
+                    p.sendMessage(plugin.lang().prefixed("messages.not_online"));
                     return true;
                 }
-                service.promote(p, t.getUniqueId(), s -> p.sendMessage(StarPrefix.PREFIX + s));
+                service.promote(p, t.getUniqueId(), s -> p.sendMessage(plugin.lang().prefixedRaw(s)));
             }
 
             case "demote" -> {
                 if (args.length < 2) {
-                    p.sendMessage(StarPrefix.PREFIX + "§7Nutze: §f/clan demote <Spieler>");
+                    p.sendMessage(plugin.lang().prefixed("messages.use.clan_demote"));
                     return true;
                 }
                 Player t = Bukkit.getPlayerExact(args[1]);
                 if (t == null) {
-                    p.sendMessage(StarPrefix.PREFIX + "§cSpieler nicht online.");
+                    p.sendMessage(plugin.lang().prefixed("messages.not_online"));
                     return true;
                 }
-                service.demote(p, t.getUniqueId(), s -> p.sendMessage(StarPrefix.PREFIX + s));
+                service.demote(p, t.getUniqueId(), s -> p.sendMessage(plugin.lang().prefixedRaw(s)));
             }
 
             default -> sendHelp(p);
@@ -176,23 +179,9 @@ public final class ClanCommand implements CommandExecutor {
     }
 
     private void sendHelp(Player p) {
-        p.sendMessage(StarPrefix.PREFIX + "§e§lClan Hilfe");
-        p.sendMessage("§8• §f/clan §7- Hauptmenü öffnen");
-        p.sendMessage("§8• §f/clan create §7- Clan erstellen");
-        p.sendMessage("§8• §f/clan invites §7- Einladungen/Anfragen ansehen");
-        p.sendMessage("§8• §f/clan invite <Spieler> §7- Spieler einladen");
-        p.sendMessage("§8• §f/clan accept <id> §7- Einladung/Anfrage annehmen");
-        p.sendMessage("§8• §f/clan deny <id> §7- Einladung/Anfrage ablehnen");
-        p.sendMessage("§8• §f/clan members §7- Mitgliederliste oeffnen");
-        p.sendMessage("§8• §f/clan members <Spieler> §7- Member verwalten");
-        p.sendMessage("§8• §f/clan manage §7- Clan-Manage GUI (Leader)");
-        p.sendMessage("§8• §f/clan settings §7- Einstellungen oeffnen");
-        p.sendMessage("§8• §f/clan tagstyler §7- Tag/Suffix stylen");
-        p.sendMessage("§8• §f/clan chat §7- Clan-Chat togglen");
-        p.sendMessage("§8• §f/clan kick <Spieler> §7- Member kicken");
-        p.sendMessage("§8• §f/clan promote <Spieler> §7- Member befoerdern");
-        p.sendMessage("§8• §f/clan demote <Spieler> §7- Member demoten");
-        p.sendMessage("§8• §f/clan leave §7- Clan verlassen");
-        p.sendMessage("§8• §f/clan disband §7- Clan loeschen (Leader)");
+        p.sendMessage(plugin.lang().prefixed("messages.help.title"));
+        for (String line : plugin.lang().getList("messages.help.lines")) {
+            p.sendMessage(line);
+        }
     }
 }

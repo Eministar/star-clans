@@ -5,7 +5,6 @@ import dev.eministar.starclans.database.ClanRepository;
 import dev.eministar.starclans.model.ClanProfile;
 import dev.eministar.starclans.model.MemberRole;
 import dev.eministar.starclans.service.ClanService;
-import dev.eministar.starclans.utils.StarPrefix;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.Sound;
@@ -33,12 +32,14 @@ public final class ClanMembersMenu implements Listener {
     private final Map<UUID, List<ClanRepository.MemberRow>> data = new HashMap<>();
 
     private ClanMemberManageMenu manageMenu;
+    private String title;
 
     public ClanMembersMenu(StarClans plugin, ClanService service, ClanRepository repo, ClanMainMenu mainMenu) {
         this.plugin = plugin;
         this.service = service;
         this.repo = repo;
         this.mainMenu = mainMenu;
+        this.title = plugin.lang().get("gui.members.title");
     }
 
     public void bindManageMenu(ClanMemberManageMenu manageMenu) {
@@ -48,7 +49,7 @@ public final class ClanMembersMenu implements Listener {
     public void open(Player p) {
         service.loadProfileAsync(p.getUniqueId(), prof -> {
             if (!prof.inClan) {
-                p.sendMessage(StarPrefix.PREFIX + "§cDu bist in keinem Clan.");
+                p.sendMessage(plugin.lang().prefixed("messages.not_in_clan"));
                 p.playSound(p.getLocation(), Sound.ENTITY_VILLAGER_NO, 0.8f, 1.0f);
                 return;
             }
@@ -65,14 +66,15 @@ public final class ClanMembersMenu implements Listener {
                 data.put(p.getUniqueId(), list);
                 Bukkit.getScheduler().runTask(plugin, () -> openInventory(p, prof, list));
             } catch (Exception e) {
-                Bukkit.getScheduler().runTask(plugin, () -> p.sendMessage(StarPrefix.PREFIX + "§cFehler beim Laden. Console."));
+                Bukkit.getScheduler().runTask(plugin, () -> p.sendMessage(plugin.lang().prefixed("messages.load_failed")));
                 e.printStackTrace();
             }
         });
     }
 
     private void openInventory(Player p, ClanProfile prof, List<ClanRepository.MemberRow> list) {
-        Inventory inv = Bukkit.createInventory(null, 54, "§b§lClan §8| §fMembers");
+        this.title = plugin.lang().get("gui.members.title");
+        Inventory inv = Bukkit.createInventory(null, 54, title);
 
         for (int i = 0; i < 54; i++) inv.setItem(i, glass());
         inv.setItem(49, back());
@@ -107,7 +109,7 @@ public final class ClanMembersMenu implements Listener {
     public void onClick(InventoryClickEvent e) {
         if (!(e.getWhoClicked() instanceof Player p)) return;
         if (e.getView() == null) return;
-        if (!"§b§lClan §8| §fMembers".equals(e.getView().getTitle())) return;
+        if (!title.equals(e.getView().getTitle())) return;
 
         e.setCancelled(true);
 
@@ -148,7 +150,7 @@ public final class ClanMembersMenu implements Listener {
 
             ClanRepository.MemberRow picked = null;
             for (ClanRepository.MemberRow row : list) {
-                if (("§f" + row.name).equals(dn)) {
+                if (plugin.lang().get("gui.members.member.name", "name", row.name).equals(dn)) {
                     picked = row;
                     break;
                 }
@@ -164,15 +166,16 @@ public final class ClanMembersMenu implements Listener {
         ItemStack it = new ItemStack(Material.PLAYER_HEAD);
         SkullMeta meta = (SkullMeta) it.getItemMeta();
         meta.setOwningPlayer(Bukkit.getOfflinePlayer(m.uuid));
-        meta.setDisplayName("§f" + m.name);
+        meta.setDisplayName(plugin.lang().get("gui.members.member.name", "name", m.name));
 
         List<String> lore = new ArrayList<>();
-        lore.add("§8");
-        lore.add("§7Rang: " + roleColor(m.role) + m.role.name());
-        boolean online = Bukkit.getPlayer(m.uuid) != null;
-        lore.add("§7Status: " + (online ? "§aOnline" : "§7Offline"));
-        lore.add("§8");
-        lore.add("§bKlick §7für Management");
+        lore.addAll(plugin.lang().getList("gui.members.member.lore",
+                "role_color", roleColor(m.role),
+                "role", plugin.lang().role(m.role),
+                "status", Bukkit.getPlayer(m.uuid) != null
+                        ? plugin.lang().get("gui.members.status.online")
+                        : plugin.lang().get("gui.members.status.offline")
+        ));
         meta.setLore(lore);
 
         meta.addItemFlags(ItemFlag.HIDE_ATTRIBUTES);
@@ -181,22 +184,18 @@ public final class ClanMembersMenu implements Listener {
     }
 
     private String roleColor(MemberRole r) {
-        if (r == MemberRole.LEADER) return "§6";
-        if (r == MemberRole.OFFICER) return "§b";
-        return "§7";
+        return plugin.lang().roleColor(r);
     }
 
     private ItemStack header(ClanProfile prof, int members, int pg) {
         ItemStack it = new ItemStack(Material.NETHER_STAR);
         ItemMeta meta = it.getItemMeta();
-        meta.setDisplayName("§b§l" + prof.clanName + " §8[§f" + prof.clanTag + "§8]");
-        meta.setLore(Arrays.asList(
-                "§8",
-                "§7Mitglieder: §f" + members,
-                "§7Seite: §f" + (pg + 1),
-                "§8",
-                "§7Tipp: §fLeader/Officer können verwalten"
-        ));
+        meta.setDisplayName(plugin.lang().get("gui.members.header.name",
+                "clan", prof.clanName,
+                "tag", prof.clanTag));
+        meta.setLore(plugin.lang().getList("gui.members.header.lore",
+                "members", members,
+                "page", (pg + 1)));
         it.setItemMeta(meta);
         return it;
     }
@@ -204,7 +203,7 @@ public final class ClanMembersMenu implements Listener {
     private ItemStack glass() {
         ItemStack it = new ItemStack(Material.GRAY_STAINED_GLASS_PANE);
         ItemMeta meta = it.getItemMeta();
-        meta.setDisplayName("§8 ");
+        meta.setDisplayName(plugin.lang().get("gui.members.glass"));
         it.setItemMeta(meta);
         return it;
     }
@@ -212,7 +211,7 @@ public final class ClanMembersMenu implements Listener {
     private ItemStack back() {
         ItemStack it = new ItemStack(Material.BARRIER);
         ItemMeta meta = it.getItemMeta();
-        meta.setDisplayName("§cZurück");
+        meta.setDisplayName(plugin.lang().get("gui.members.back"));
         it.setItemMeta(meta);
         return it;
     }
@@ -220,7 +219,7 @@ public final class ClanMembersMenu implements Listener {
     private ItemStack prev() {
         ItemStack it = new ItemStack(Material.ARROW);
         ItemMeta meta = it.getItemMeta();
-        meta.setDisplayName("§7Vorherige Seite");
+        meta.setDisplayName(plugin.lang().get("gui.members.prev"));
         it.setItemMeta(meta);
         return it;
     }
@@ -228,7 +227,7 @@ public final class ClanMembersMenu implements Listener {
     private ItemStack next() {
         ItemStack it = new ItemStack(Material.ARROW);
         ItemMeta meta = it.getItemMeta();
-        meta.setDisplayName("§7Nächste Seite");
+        meta.setDisplayName(plugin.lang().get("gui.members.next"));
         it.setItemMeta(meta);
         return it;
     }

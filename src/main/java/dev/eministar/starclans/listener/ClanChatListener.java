@@ -3,7 +3,6 @@ package dev.eministar.starclans.listener;
 import dev.eministar.starclans.StarClans;
 import dev.eministar.starclans.database.ClanRepository;
 import dev.eministar.starclans.service.ClanService;
-import dev.eministar.starclans.utils.StarPrefix;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -40,7 +39,7 @@ public final class ClanChatListener implements Listener {
             try {
                 long clanId = repo.getClanIdByMember(u);
                 if (clanId <= 0) {
-                    Bukkit.getScheduler().runTask(plugin, () -> sender.sendMessage(StarPrefix.PREFIX + "§cDu bist in keinem Clan."));
+                    Bukkit.getScheduler().runTask(plugin, () -> sender.sendMessage(plugin.lang().prefixed("messages.not_in_clan")));
                     return;
                 }
 
@@ -48,7 +47,9 @@ public final class ClanChatListener implements Listener {
                 List<UUID> targets = new ArrayList<>();
                 for (ClanRepository.MemberRow m : members) targets.add(m.uuid);
 
-                String msg = StarPrefix.PREFIX + "§bClan §8» §f" + sender.getName() + "§7: §f" + e.getMessage();
+                String msg = plugin.lang().prefixed("messages.clan_chat.fallback_format",
+                        "player", sender.getName(),
+                        "message", e.getMessage());
 
                 Bukkit.getScheduler().runTask(plugin, () -> {
                     for (UUID t : targets) {

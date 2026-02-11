@@ -4,7 +4,6 @@ import dev.eministar.starclans.StarClans;
 import dev.eministar.starclans.database.ClanRepository;
 import dev.eministar.starclans.model.MemberRole;
 import dev.eministar.starclans.service.ClanService;
-import dev.eministar.starclans.utils.StarPrefix;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.Sound;
@@ -18,14 +17,11 @@ import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 
-import java.util.Arrays;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 public final class ClanSettingsMenu implements Listener {
-
-    private static final String TITLE = "§b§lClan §8| §fManage";
 
     private final StarClans plugin;
     private final ClanService service;
@@ -33,12 +29,14 @@ public final class ClanSettingsMenu implements Listener {
     private final ClanMainMenu mainMenu;
 
     private final Set<UUID> motdEdit = ConcurrentHashMap.newKeySet();
+    private String title;
 
     public ClanSettingsMenu(StarClans plugin, ClanService service, ClanRepository repo, ClanMainMenu mainMenu) {
         this.plugin = plugin;
         this.service = service;
         this.repo = repo;
         this.mainMenu = mainMenu;
+        this.title = plugin.lang().get("gui.settings.title");
     }
 
     public void open(Player p) {
@@ -46,25 +44,26 @@ public final class ClanSettingsMenu implements Listener {
             try {
                 long clanId = repo.getClanIdByMember(p.getUniqueId());
                 if (clanId <= 0) {
-                    Bukkit.getScheduler().runTask(plugin, () -> p.sendMessage(StarPrefix.PREFIX + "§cDu bist in keinem Clan."));
+                    Bukkit.getScheduler().runTask(plugin, () -> p.sendMessage(plugin.lang().prefixed("messages.not_in_clan")));
                     return;
                 }
                 MemberRole role = repo.getRole(p.getUniqueId());
                 if (role != MemberRole.LEADER) {
-                    Bukkit.getScheduler().runTask(plugin, () -> p.sendMessage(StarPrefix.PREFIX + "§cNur der Leader kann Clan-Manage öffnen."));
+                    Bukkit.getScheduler().runTask(plugin, () -> p.sendMessage(plugin.lang().prefixed("messages.only_leader_manage")));
                     return;
                 }
                 ClanRepository.ClanSettingsRow s = repo.getSettings(clanId);
                 Bukkit.getScheduler().runTask(plugin, () -> openInv(p, role, s));
             } catch (Exception e) {
                 e.printStackTrace();
-                Bukkit.getScheduler().runTask(plugin, () -> p.sendMessage(StarPrefix.PREFIX + "§cFehler. Console."));
+                Bukkit.getScheduler().runTask(plugin, () -> p.sendMessage(plugin.lang().prefixed("messages.error_console")));
             }
         });
     }
 
     private void openInv(Player p, MemberRole role, ClanRepository.ClanSettingsRow s) {
-        Inventory inv = Bukkit.createInventory(null, 45, TITLE);
+        this.title = plugin.lang().get("gui.settings.title");
+        Inventory inv = Bukkit.createInventory(null, 45, title);
 
         for (int i = 0; i < 45; i++) inv.setItem(i, glass());
 
@@ -73,10 +72,10 @@ public final class ClanSettingsMenu implements Listener {
         boolean can = role != MemberRole.MEMBER;
 
         inv.setItem(11, tagStyler());
-        inv.setItem(13, can ? motd(s.motd) : locked("§cKeine Rechte"));
+        inv.setItem(13, can ? motd(s.motd) : locked(plugin.lang().get("gui.settings.locked")));
         inv.setItem(15, disband());
 
-        inv.setItem(21, can ? toggle("§bOpen Invite", s.openInvite) : locked("§cKeine Rechte"));
+        inv.setItem(21, can ? toggle(plugin.lang().get("gui.settings.open_invite.name"), s.openInvite) : locked(plugin.lang().get("gui.settings.locked")));
         inv.setItem(23, members());
         inv.setItem(31, invites());
 
@@ -87,7 +86,7 @@ public final class ClanSettingsMenu implements Listener {
     @EventHandler
     public void onClick(InventoryClickEvent e) {
         if (!(e.getWhoClicked() instanceof Player p)) return;
-        if (!TITLE.equals(e.getView().getTitle())) return;
+        if (!title.equals(e.getView().getTitle())) return;
 
         e.setCancelled(true);
 
@@ -111,7 +110,7 @@ public final class ClanSettingsMenu implements Listener {
         if (slot == 13) {
             motdEdit.add(p.getUniqueId());
             p.closeInventory();
-            p.sendMessage(StarPrefix.PREFIX + "§7Schreib neue MOTD in den Chat. §8(§fcancel§8 zum Abbrechen)");
+            p.sendMessage(plugin.lang().prefixed("messages.motd.prompt"));
             p.playSound(p.getLocation(), Sound.UI_BUTTON_CLICK, 0.8f, 1.6f);
             return;
         }
@@ -125,7 +124,7 @@ public final class ClanSettingsMenu implements Listener {
 
         if (slot == 21) {
             service.toggleOpenInvite(p, s -> {
-                p.sendMessage(StarPrefix.PREFIX + s);
+                p.sendMessage(plugin.lang().prefixedRaw(s));
                 open(p);
             });
             p.playSound(p.getLocation(), Sound.UI_BUTTON_CLICK, 0.8f, 1.6f);
@@ -159,14 +158,14 @@ public final class ClanSettingsMenu implements Listener {
         String msg = e.getMessage();
         if (msg.equalsIgnoreCase("cancel")) {
             Bukkit.getScheduler().runTask(plugin, () -> {
-                p.sendMessage(StarPrefix.PREFIX + "§7Abgebrochen.");
+                p.sendMessage(plugin.lang().prefixed("messages.motd.cancelled"));
                 open(p);
             });
             return;
         }
 
         service.setMotd(p, msg, s -> {
-            p.sendMessage(StarPrefix.PREFIX + s);
+            p.sendMessage(plugin.lang().prefixedRaw(s));
             open(p);
         });
     }
@@ -180,14 +179,9 @@ public final class ClanSettingsMenu implements Listener {
         ItemStack it = new ItemStack(Material.WRITABLE_BOOK);
         ItemMeta meta = it.getItemMeta();
         if (meta != null) {
-            meta.setDisplayName("§eMOTD bearbeiten");
-            meta.setLore(Arrays.asList(
-                    "§8",
-                    "§7Aktuell:",
-                    "§f" + (motd == null || motd.isEmpty() ? "§8(keine)" : motd),
-                    "§8",
-                    "§bKlick §7zum Bearbeiten"
-            ));
+            meta.setDisplayName(plugin.lang().get("gui.settings.motd.name"));
+            meta.setLore(plugin.lang().getList("gui.settings.motd.lore",
+                    "motd", motd == null || motd.isEmpty() ? plugin.lang().get("gui.settings.motd.none") : motd));
             it.setItemMeta(meta);
         }
         return it;
@@ -198,12 +192,8 @@ public final class ClanSettingsMenu implements Listener {
         ItemMeta meta = it.getItemMeta();
         if (meta != null) {
             meta.setDisplayName(name);
-            meta.setLore(Arrays.asList(
-                    "§8",
-                    "§7Status: " + (enabled ? "§aAN" : "§7AUS"),
-                    "§8",
-                    "§bKlick §7zum togglen"
-            ));
+            meta.setLore(plugin.lang().getList("gui.settings.toggle.lore",
+                    "status", enabled ? plugin.lang().get("gui.settings.toggle.on") : plugin.lang().get("gui.settings.toggle.off")));
             it.setItemMeta(meta);
         }
         return it;
@@ -223,7 +213,7 @@ public final class ClanSettingsMenu implements Listener {
         ItemStack it = new ItemStack(Material.BARRIER);
         ItemMeta meta = it.getItemMeta();
         if (meta != null) {
-            meta.setDisplayName("§cZurück");
+            meta.setDisplayName(plugin.lang().get("gui.settings.back"));
             it.setItemMeta(meta);
         }
         return it;
@@ -233,13 +223,8 @@ public final class ClanSettingsMenu implements Listener {
         ItemStack it = new ItemStack(Material.NETHER_STAR);
         ItemMeta meta = it.getItemMeta();
         if (meta != null) {
-            meta.setDisplayName("§dTag Styler");
-            meta.setLore(Arrays.asList(
-                    "§8",
-                    "§7Tag-Farben & Style",
-                    "§8",
-                    "§bKlick §7zum Öffnen"
-            ));
+            meta.setDisplayName(plugin.lang().get("gui.settings.tag_styler.name"));
+            meta.setLore(plugin.lang().getList("gui.settings.tag_styler.lore"));
             it.setItemMeta(meta);
         }
         return it;
@@ -249,13 +234,8 @@ public final class ClanSettingsMenu implements Listener {
         ItemStack it = new ItemStack(Material.PLAYER_HEAD);
         ItemMeta meta = it.getItemMeta();
         if (meta != null) {
-            meta.setDisplayName("§bMitglieder");
-            meta.setLore(Arrays.asList(
-                    "§8",
-                    "§7Mitglieder verwalten",
-                    "§8",
-                    "§bKlick §7zum Öffnen"
-            ));
+            meta.setDisplayName(plugin.lang().get("gui.settings.members.name"));
+            meta.setLore(plugin.lang().getList("gui.settings.members.lore"));
             it.setItemMeta(meta);
         }
         return it;
@@ -265,13 +245,8 @@ public final class ClanSettingsMenu implements Listener {
         ItemStack it = new ItemStack(Material.PAPER);
         ItemMeta meta = it.getItemMeta();
         if (meta != null) {
-            meta.setDisplayName("§eEinladungen");
-            meta.setLore(Arrays.asList(
-                    "§8",
-                    "§7Anfragen annehmen/ablehnen",
-                    "§8",
-                    "§bKlick §7zum Öffnen"
-            ));
+            meta.setDisplayName(plugin.lang().get("gui.settings.invites.name"));
+            meta.setLore(plugin.lang().getList("gui.settings.invites.lore"));
             it.setItemMeta(meta);
         }
         return it;
@@ -281,13 +256,8 @@ public final class ClanSettingsMenu implements Listener {
         ItemStack it = new ItemStack(Material.TNT);
         ItemMeta meta = it.getItemMeta();
         if (meta != null) {
-            meta.setDisplayName("§cClan löschen");
-            meta.setLore(Arrays.asList(
-                    "§8",
-                    "§7Löscht den Clan dauerhaft",
-                    "§8",
-                    "§cKlick §7zum Auflösen"
-            ));
+            meta.setDisplayName(plugin.lang().get("gui.settings.disband.name"));
+            meta.setLore(plugin.lang().getList("gui.settings.disband.lore"));
             it.setItemMeta(meta);
         }
         return it;
@@ -297,7 +267,7 @@ public final class ClanSettingsMenu implements Listener {
         ItemStack it = new ItemStack(Material.GRAY_STAINED_GLASS_PANE);
         ItemMeta meta = it.getItemMeta();
         if (meta != null) {
-            meta.setDisplayName("§8 ");
+            meta.setDisplayName(plugin.lang().get("gui.settings.glass"));
             it.setItemMeta(meta);
         }
         return it;

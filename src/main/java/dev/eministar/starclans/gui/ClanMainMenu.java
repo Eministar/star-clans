@@ -3,7 +3,6 @@ package dev.eministar.starclans.gui;
 import dev.eministar.starclans.StarClans;
 import dev.eministar.starclans.model.ClanProfile;
 import dev.eministar.starclans.service.ClanService;
-import dev.eministar.starclans.utils.StarPrefix;
 import dev.eministar.starclans.vault.VaultHook;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
@@ -20,7 +19,6 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.persistence.PersistentDataType;
 
-import java.util.Arrays;
 
 public final class ClanMainMenu implements Listener {
 
@@ -28,12 +26,13 @@ public final class ClanMainMenu implements Listener {
     private final ClanService service;
 
     private final NamespacedKey actionKey;
-    private final String title = "§b§lStarClans §8✦ §fClan Menü";
+    private String title;
 
     public ClanMainMenu(StarClans plugin, ClanService service) {
         this.plugin = plugin;
         this.service = service;
         this.actionKey = new NamespacedKey(plugin, "sc_action");
+        this.title = plugin.lang().get("gui.main.title");
     }
 
     public void open(Player player) {
@@ -41,6 +40,7 @@ public final class ClanMainMenu implements Listener {
     }
 
     private void openWithProfile(Player player, ClanProfile profile) {
+        this.title = plugin.lang().get("gui.main.title");
         Inventory inv = Bukkit.createInventory(player, 54, title);
 
         ItemStack border = pane(Material.BLACK_STAINED_GLASS_PANE);
@@ -56,42 +56,57 @@ public final class ClanMainMenu implements Listener {
             boolean ecoOk = VaultHook.hasEconomy();
 
             String costLine;
-            if (cost <= 0.0) costLine = "§8• §fKosten: §aGratis";
-            else if (ecoOk) costLine = "§8• §fKosten: §6" + ClanService.moneyStatic(cost);
-            else costLine = "§8• §fKosten: §cVault/Eco fehlt!";
+            if (cost <= 0.0) {
+                costLine = plugin.lang().get("gui.main.cost.free");
+            } else if (ecoOk) {
+                costLine = plugin.lang().get("gui.main.cost.amount",
+                        "cost", ClanService.moneyStatic(cost, plugin.lang().get("messages.money_suffix")));
+            } else {
+                costLine = plugin.lang().get("gui.main.cost.vault_missing");
+            }
 
-            inv.setItem(22, button(Material.EMERALD, "§a§lClan erstellen",
-                    Arrays.asList("§7Erstelle deinen eigenen Clan", "", costLine, "", "§7Klick zum Starten"),
+            inv.setItem(22, button(Material.EMERALD, plugin.lang().get("gui.main.create.name"),
+                    plugin.lang().getList("gui.main.create.lore", "cost_line", costLine),
                     "CREATE", true));
 
-            String invLine = profile.inviteCount <= 0 ? "§8• §fEinladungen: §7Keine" : "§8• §fEinladungen: §a" + profile.inviteCount;
-            inv.setItem(24, button(Material.PAPER, "§e§lEinladungen",
-                    Arrays.asList("§7Sieh deine offenen Invites", "", invLine, "", "§7Klick zum Öffnen"),
+            String invLine = profile.inviteCount <= 0
+                    ? plugin.lang().get("gui.main.invites.none")
+                    : plugin.lang().get("gui.main.invites.some", "count", profile.inviteCount);
+            inv.setItem(24, button(Material.PAPER, plugin.lang().get("gui.main.invites.name"),
+                    plugin.lang().getList("gui.main.invites.lore", "invites_line", invLine),
                     "INVITES", profile.inviteCount > 0));
 
-            inv.setItem(49, button(Material.BARRIER, "§c§lSchließen", Arrays.asList("§7Menü schließen"), "CLOSE", false));
+            inv.setItem(49, button(Material.BARRIER, plugin.lang().get("gui.main.close.name"),
+                    plugin.lang().getList("gui.main.close.lore"), "CLOSE", false));
 
         } else {
-            inv.setItem(22, button(Material.NETHER_STAR, "§b§lMein Clan",
-                    Arrays.asList("§7Name: §f" + profile.clanName, "§7Tag: §b" + profile.clanTag, "§7Rolle: §f" + profile.role.name(),
-                            "§7Mitglieder: §f" + profile.memberCount, "", "§7Klick für Clan-Manage"),
+            inv.setItem(22, button(Material.NETHER_STAR, plugin.lang().get("gui.main.my_clan.name"),
+                    plugin.lang().getList("gui.main.my_clan.lore",
+                            "clan_name", profile.clanName,
+                            "clan_tag", profile.clanTag,
+                            "role", plugin.lang().role(profile.role),
+                            "members", profile.memberCount),
                     "MANAGE", true));
 
-            inv.setItem(20, button(Material.PLAYER_HEAD, "§d§lMitglieder",
-                    Arrays.asList("§7Mitglieder anzeigen", "§7und Rollen später verwalten", "", "§7Klick zum Öffnen"),
+            inv.setItem(20, button(Material.PLAYER_HEAD, plugin.lang().get("gui.main.members.name"),
+                    plugin.lang().getList("gui.main.members.lore"),
                     "MEMBERS", false));
 
-            String invLine = profile.inviteCount <= 0 ? "§8• §fEinladungen: §7Keine" : "§8• §fEinladungen: §a" + profile.inviteCount;
-            inv.setItem(24, button(Material.PAPER, "§e§lEinladungen",
-                    Arrays.asList("§7Offene Invites", "", invLine, "", "§7Klick zum Öffnen"),
+            String invLine = profile.inviteCount <= 0
+                    ? plugin.lang().get("gui.main.invites.none")
+                    : plugin.lang().get("gui.main.invites.some", "count", profile.inviteCount);
+            inv.setItem(24, button(Material.PAPER, plugin.lang().get("gui.main.invites.name"),
+                    plugin.lang().getList("gui.main.invites.lore_in_clan", "invites_line", invLine),
                     "INVITES", profile.inviteCount > 0));
 
             boolean chatOn = service.isClanChat(player.getUniqueId());
-            inv.setItem(31, button(Material.OAK_SIGN, chatOn ? "§a§lClan Chat: AN" : "§c§lClan Chat: AUS",
-                    Arrays.asList("§7Toggle Clan-Chat Modus", "", "§7Klick zum Umschalten"),
+            inv.setItem(31, button(Material.OAK_SIGN,
+                    plugin.lang().get(chatOn ? "gui.main.chat_toggle.on" : "gui.main.chat_toggle.off"),
+                    plugin.lang().getList("gui.main.chat_toggle.lore"),
                     "CHAT_TOGGLE", chatOn));
 
-            inv.setItem(49, button(Material.BARRIER, "§c§lSchließen", Arrays.asList("§7Menü schließen"), "CLOSE", false));
+            inv.setItem(49, button(Material.BARRIER, plugin.lang().get("gui.main.close.name"),
+                    plugin.lang().getList("gui.main.close.lore"), "CLOSE", false));
         }
 
         player.openInventory(inv);

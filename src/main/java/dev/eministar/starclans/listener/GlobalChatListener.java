@@ -44,16 +44,20 @@ public final class GlobalChatListener implements Listener {
                 try {
                     ClanRepository.ClanCosmeticsRow cos = repo.getCosmetics(prof.clanId);
                     String tagStyle = cos.tagStyle.isEmpty() ? "§b" : cos.tagStyle;
-                    String suffix = " §8[§r" + tagStyle + prof.clanTag + "§8]§r";
+                    String suffix = plugin.lang().get("messages.chat.tag_suffix",
+                            "style", tagStyle,
+                            "tag", prof.clanTag);
                     MemberRole role = prof.role == null ? MemberRole.MEMBER : prof.role;
-                    String hover = "§7Rang: " + roleColor(role) + role.name();
+                    String hover = plugin.lang().get("messages.chat.hover",
+                            "role_color", roleColor(role),
+                            "role", plugin.lang().role(role));
 
-                    TextComponent prefix = new TextComponent("§d§lC §8| §f");
+                    TextComponent prefix = new TextComponent(plugin.lang().get("messages.chat.clan_prefix"));
                     TextComponent name = new TextComponent(p.getName());
                     name.setHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, new ComponentBuilder(hover).create()));
                     name.setClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, "/clan members " + p.getName()));
                     TextComponent suffixComp = new TextComponent(suffix);
-                    TextComponent rest = new TextComponent(" §8» §d" + msg);
+                    TextComponent rest = new TextComponent(plugin.lang().get("messages.chat.clan_message_tail", "message", msg));
                     BaseComponent[] out = new BaseComponent[]{prefix, name, suffixComp, rest};
 
                     java.util.List<ClanRepository.MemberRow> members = repo.listMembers(prof.clanId);
@@ -74,7 +78,7 @@ public final class GlobalChatListener implements Listener {
         }
 
         if (prof == null || !prof.inClan) {
-            e.setFormat("§7%1$s §8» §7%2$s");
+            e.setFormat(plugin.lang().get("messages.chat.global_no_clan_format"));
             return;
         }
 
@@ -83,9 +87,12 @@ public final class GlobalChatListener implements Listener {
                 ClanRepository.ClanCosmeticsRow cos = repo.getCosmetics(prof.clanId);
 
                 String tagStyle = cos.tagStyle.isEmpty() ? "§b" : cos.tagStyle;
-                String suffix = " §8[§r" + tagStyle + prof.clanTag + "§8]§r";
+                String suffix = plugin.lang().get("messages.chat.tag_suffix",
+                        "style", tagStyle,
+                        "tag", prof.clanTag);
 
-                String format = "§f%1$s" + suffix + " §8» §7%2$s";
+                String format = plugin.lang().get("messages.chat.global_with_clan_format",
+                        "suffix", suffix);
                 Bukkit.getScheduler().runTask(plugin, () -> e.setFormat(format));
             } catch (Exception ex) {
                 ex.printStackTrace();
@@ -94,8 +101,6 @@ public final class GlobalChatListener implements Listener {
     }
 
     private String roleColor(MemberRole r) {
-        if (r == MemberRole.LEADER) return "§6";
-        if (r == MemberRole.OFFICER) return "§b";
-        return "§7";
+        return plugin.lang().roleColor(r);
     }
 }

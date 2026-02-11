@@ -4,7 +4,6 @@ import dev.eministar.starclans.StarClans;
 import dev.eministar.starclans.database.ClanRepository;
 import dev.eministar.starclans.model.MemberRole;
 import dev.eministar.starclans.service.ClanService;
-import dev.eministar.starclans.utils.StarPrefix;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.Sound;
@@ -29,12 +28,14 @@ public final class ClanMemberManageMenu implements Listener {
     private final Map<UUID, UUID> target = new HashMap<>();
     private final Map<UUID, MemberRole> viewerRole = new HashMap<>();
     private final Map<UUID, MemberRole> targetRole = new HashMap<>();
+    private String title;
 
     public ClanMemberManageMenu(StarClans plugin, ClanService service, ClanRepository repo, ClanMembersMenu membersMenu) {
         this.plugin = plugin;
         this.service = service;
         this.repo = repo;
         this.membersMenu = membersMenu;
+        this.title = plugin.lang().get("gui.member_manage.title");
     }
 
     public void open(Player viewer, UUID targetUuid) {
@@ -42,13 +43,13 @@ public final class ClanMemberManageMenu implements Listener {
             try {
                 long clanId = repo.getClanIdByMember(viewer.getUniqueId());
                 if (clanId <= 0) {
-                    Bukkit.getScheduler().runTask(plugin, () -> viewer.sendMessage(StarPrefix.PREFIX + "§cDu bist in keinem Clan."));
+                    Bukkit.getScheduler().runTask(plugin, () -> viewer.sendMessage(plugin.lang().prefixed("messages.not_in_clan")));
                     return;
                 }
 
                 long tClan = repo.getClanIdByMember(targetUuid);
                 if (tClan != clanId) {
-                    Bukkit.getScheduler().runTask(plugin, () -> viewer.sendMessage(StarPrefix.PREFIX + "§cNicht in deinem Clan."));
+                    Bukkit.getScheduler().runTask(plugin, () -> viewer.sendMessage(plugin.lang().prefixed("messages.not_in_your_clan")));
                     return;
                 }
 
@@ -56,23 +57,23 @@ public final class ClanMemberManageMenu implements Listener {
                 MemberRole tRole = repo.getRole(targetUuid);
 
                 if (vRole == MemberRole.MEMBER) {
-                    Bukkit.getScheduler().runTask(plugin, () -> viewer.sendMessage(StarPrefix.PREFIX + "§cKeine Rechte."));
+                    Bukkit.getScheduler().runTask(plugin, () -> viewer.sendMessage(plugin.lang().prefixed("messages.no_rights")));
                     return;
                 }
 
                 if (vRole == MemberRole.OFFICER && tRole != MemberRole.MEMBER) {
-                    Bukkit.getScheduler().runTask(plugin, () -> viewer.sendMessage(StarPrefix.PREFIX + "§cDu kannst nur Member verwalten."));
+                    Bukkit.getScheduler().runTask(plugin, () -> viewer.sendMessage(plugin.lang().prefixed("messages.only_member_manage")));
                     return;
                 }
 
                 if (vRole == MemberRole.LEADER && tRole == MemberRole.LEADER) {
-                    Bukkit.getScheduler().runTask(plugin, () -> viewer.sendMessage(StarPrefix.PREFIX + "§cDu kannst den Leader nicht verwalten."));
+                    Bukkit.getScheduler().runTask(plugin, () -> viewer.sendMessage(plugin.lang().prefixed("messages.cannot_manage_leader")));
                     return;
                 }
 
                 Bukkit.getScheduler().runTask(plugin, () -> openInv(viewer, targetUuid, vRole, tRole));
             } catch (Exception e) {
-                Bukkit.getScheduler().runTask(plugin, () -> viewer.sendMessage(StarPrefix.PREFIX + "§cFehler. Console."));
+                Bukkit.getScheduler().runTask(plugin, () -> viewer.sendMessage(plugin.lang().prefixed("messages.error_console")));
                 e.printStackTrace();
             }
         });
@@ -83,7 +84,8 @@ public final class ClanMemberManageMenu implements Listener {
         viewerRole.put(viewer.getUniqueId(), vRole);
         targetRole.put(viewer.getUniqueId(), tRole);
 
-        Inventory inv = Bukkit.createInventory(null, 27, "§b§lMember §8| §fManage");
+        this.title = plugin.lang().get("gui.member_manage.title");
+        Inventory inv = Bukkit.createInventory(null, 27, title);
 
         for (int i = 0; i < 27; i++) inv.setItem(i, glass());
         inv.setItem(13, head(t, tRole));
@@ -97,12 +99,12 @@ public final class ClanMemberManageMenu implements Listener {
         boolean canPromote = vRole == MemberRole.LEADER;
 
         if (!canPromote) {
-            inv.setItem(11, locked("§cKeine Rechte"));
-            inv.setItem(15, locked("§cKeine Rechte"));
+            inv.setItem(11, locked(plugin.lang().get("gui.member_manage.locked")));
+            inv.setItem(15, locked(plugin.lang().get("gui.member_manage.locked")));
         }
 
         if (!canKick) {
-            inv.setItem(22, locked("§cKeine Rechte"));
+            inv.setItem(22, locked(plugin.lang().get("gui.member_manage.locked")));
         }
 
         viewer.openInventory(inv);
@@ -113,7 +115,7 @@ public final class ClanMemberManageMenu implements Listener {
     public void onClick(InventoryClickEvent e) {
         if (!(e.getWhoClicked() instanceof Player p)) return;
         if (e.getView() == null) return;
-        if (!"§b§lMember §8| §fManage".equals(e.getView().getTitle())) return;
+        if (!title.equals(e.getView().getTitle())) return;
 
         e.setCancelled(true);
 
@@ -133,11 +135,11 @@ public final class ClanMemberManageMenu implements Listener {
 
         if (slot == 11) {
             if (vRole != MemberRole.LEADER) {
-                p.sendMessage(StarPrefix.PREFIX + "§cKeine Rechte.");
+                p.sendMessage(plugin.lang().prefixed("messages.no_rights"));
                 return;
             }
             service.promote(p, t, s -> {
-                p.sendMessage(StarPrefix.PREFIX + s);
+                p.sendMessage(plugin.lang().prefixedRaw(s));
                 open(p, t);
             });
             p.playSound(p.getLocation(), Sound.UI_BUTTON_CLICK, 0.8f, 1.6f);
@@ -146,11 +148,11 @@ public final class ClanMemberManageMenu implements Listener {
 
         if (slot == 15) {
             if (vRole != MemberRole.LEADER) {
-                p.sendMessage(StarPrefix.PREFIX + "§cKeine Rechte.");
+                p.sendMessage(plugin.lang().prefixed("messages.no_rights"));
                 return;
             }
             service.demote(p, t, s -> {
-                p.sendMessage(StarPrefix.PREFIX + s);
+                p.sendMessage(plugin.lang().prefixedRaw(s));
                 open(p, t);
             });
             p.playSound(p.getLocation(), Sound.UI_BUTTON_CLICK, 0.8f, 1.6f);
@@ -159,15 +161,15 @@ public final class ClanMemberManageMenu implements Listener {
 
         if (slot == 22) {
             if (vRole == MemberRole.MEMBER) {
-                p.sendMessage(StarPrefix.PREFIX + "§cKeine Rechte.");
+                p.sendMessage(plugin.lang().prefixed("messages.no_rights"));
                 return;
             }
             if (vRole == MemberRole.OFFICER && tRole != MemberRole.MEMBER) {
-                p.sendMessage(StarPrefix.PREFIX + "§cDu kannst nur Member kicken.");
+                p.sendMessage(plugin.lang().prefixed("messages.kick.only_member"));
                 return;
             }
             service.kick(p, t, s -> {
-                p.sendMessage(StarPrefix.PREFIX + s);
+                p.sendMessage(plugin.lang().prefixedRaw(s));
                 membersMenu.open(p);
             });
             p.playSound(p.getLocation(), Sound.ENTITY_VILLAGER_NO, 0.7f, 1.0f);
@@ -178,26 +180,23 @@ public final class ClanMemberManageMenu implements Listener {
         ItemStack it = new ItemStack(Material.PLAYER_HEAD);
         SkullMeta meta = (SkullMeta) it.getItemMeta();
         meta.setOwningPlayer(Bukkit.getOfflinePlayer(uuid));
-        meta.setDisplayName("§f" + Bukkit.getOfflinePlayer(uuid).getName());
-        meta.setLore(Arrays.asList(
-                "§8",
-                "§7Rang: " + roleColor(role) + role.name(),
-                "§8"
-        ));
+        meta.setDisplayName(plugin.lang().get("gui.member_manage.head.name",
+                "name", Bukkit.getOfflinePlayer(uuid).getName()));
+        meta.setLore(plugin.lang().getList("gui.member_manage.head.lore",
+                "role_color", roleColor(role),
+                "role", plugin.lang().role(role)));
         it.setItemMeta(meta);
         return it;
     }
 
     private String roleColor(MemberRole r) {
-        if (r == MemberRole.LEADER) return "§6";
-        if (r == MemberRole.OFFICER) return "§b";
-        return "§7";
+        return plugin.lang().roleColor(r);
     }
 
     private ItemStack promote() {
         ItemStack it = new ItemStack(Material.EMERALD);
         ItemMeta meta = it.getItemMeta();
-        meta.setDisplayName("§aPromote §8→ §bOFFICER");
+        meta.setDisplayName(plugin.lang().get("gui.member_manage.promote"));
         it.setItemMeta(meta);
         return it;
     }
@@ -205,7 +204,7 @@ public final class ClanMemberManageMenu implements Listener {
     private ItemStack demote() {
         ItemStack it = new ItemStack(Material.GOLD_INGOT);
         ItemMeta meta = it.getItemMeta();
-        meta.setDisplayName("§eDemote §8→ §7MEMBER");
+        meta.setDisplayName(plugin.lang().get("gui.member_manage.demote"));
         it.setItemMeta(meta);
         return it;
     }
@@ -213,7 +212,7 @@ public final class ClanMemberManageMenu implements Listener {
     private ItemStack kick() {
         ItemStack it = new ItemStack(Material.REDSTONE);
         ItemMeta meta = it.getItemMeta();
-        meta.setDisplayName("§cKick");
+        meta.setDisplayName(plugin.lang().get("gui.member_manage.kick"));
         it.setItemMeta(meta);
         return it;
     }
@@ -229,7 +228,7 @@ public final class ClanMemberManageMenu implements Listener {
     private ItemStack back() {
         ItemStack it = new ItemStack(Material.BARRIER);
         ItemMeta meta = it.getItemMeta();
-        meta.setDisplayName("§cZurück");
+        meta.setDisplayName(plugin.lang().get("gui.member_manage.back"));
         it.setItemMeta(meta);
         return it;
     }
@@ -237,7 +236,7 @@ public final class ClanMemberManageMenu implements Listener {
     private ItemStack glass() {
         ItemStack it = new ItemStack(Material.GRAY_STAINED_GLASS_PANE);
         ItemMeta meta = it.getItemMeta();
-        meta.setDisplayName("§8 ");
+        meta.setDisplayName(plugin.lang().get("gui.member_manage.glass"));
         it.setItemMeta(meta);
         return it;
     }

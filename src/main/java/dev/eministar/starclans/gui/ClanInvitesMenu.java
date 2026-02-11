@@ -3,7 +3,6 @@ package dev.eministar.starclans.gui;
 import dev.eministar.starclans.StarClans;
 import dev.eministar.starclans.database.ClanRepository;
 import dev.eministar.starclans.model.MemberRole;
-import dev.eministar.starclans.utils.StarPrefix;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
@@ -39,7 +38,7 @@ public final class ClanInvitesMenu implements Listener {
             this.clanName = clanName;
             this.clanTag = clanTag;
             this.targetUuid = targetUuid;
-            this.inviterName = inviterName == null ? "Unknown" : inviterName;
+            this.inviterName = inviterName;
             this.inviterRole = inviterRole == null ? MemberRole.MEMBER : inviterRole;
             this.approvalView = approvalView;
         }
@@ -51,13 +50,14 @@ public final class ClanInvitesMenu implements Listener {
     private final NamespacedKey actionKey;
     private final NamespacedKey inviteKey;
 
-    private final String title = "§e§lEinladungen";
+    private String title;
 
     public ClanInvitesMenu(StarClans plugin, ClanRepository repo) {
         this.plugin = plugin;
         this.repo = repo;
         this.actionKey = new NamespacedKey(plugin, "sc_action");
         this.inviteKey = new NamespacedKey(plugin, "sc_invite");
+        this.title = plugin.lang().get("gui.invites.title");
     }
 
     public void open(Player p) {
@@ -91,7 +91,7 @@ public final class ClanInvitesMenu implements Listener {
                     Bukkit.getScheduler().runTask(plugin, new Runnable() {
                         @Override
                         public void run() {
-                            p.sendMessage(StarPrefix.PREFIX + "§cFehler beim Laden.");
+                            p.sendMessage(plugin.lang().prefixed("messages.load_failed_short"));
                             p.playSound(p.getLocation(), Sound.ENTITY_VILLAGER_NO, 0.8f, 1.0f);
                         }
                     });
@@ -102,6 +102,7 @@ public final class ClanInvitesMenu implements Listener {
     }
 
     private void openInv(Player p, List<InviteDisplay> invites) {
+        this.title = plugin.lang().get("gui.invites.title");
         Inventory inv = Bukkit.createInventory(p, 54, title);
 
         for (int i = 0; i < 54; i++) inv.setItem(i, pane(Material.GRAY_STAINED_GLASS_PANE));
@@ -114,36 +115,34 @@ public final class ClanInvitesMenu implements Listener {
         inv.setItem(35, pane(Material.BLACK_STAINED_GLASS_PANE));
         for (int i = 45; i <= 53; i++) inv.setItem(i, pane(Material.BLACK_STAINED_GLASS_PANE));
 
-        inv.setItem(49, button(Material.BARRIER, "§c§lZurück", java.util.Arrays.asList("§7Zurück zum Clan-Menü"), "BACK", false, -1));
+        inv.setItem(49, button(Material.BARRIER, plugin.lang().get("gui.invites.back.name"),
+                plugin.lang().getList("gui.invites.back.lore"), "BACK", false, -1));
 
         int slot = 10;
         for (InviteDisplay row : invites) {
             if (slot >= 44) break;
             if (slot == 17 || slot == 26 || slot == 35) slot++;
 
-            String targetName = row.targetUuid == null ? "Unknown" : Bukkit.getOfflinePlayer(row.targetUuid).getName();
-            if (targetName == null) targetName = "Unknown";
+            String targetName = row.targetUuid == null ? plugin.lang().get("messages.generic_unknown") : Bukkit.getOfflinePlayer(row.targetUuid).getName();
+            if (targetName == null) targetName = plugin.lang().get("messages.generic_unknown");
 
             ItemStack it;
+            String inviterName = row.inviterName == null ? plugin.lang().get("messages.generic_unknown") : row.inviterName;
             if (row.approvalView) {
                 it = button(Material.PAPER,
-                        "§e§lAnfrage: §f" + targetName,
-                        java.util.Arrays.asList(
-                                "§7Eingeladen von: §f" + row.inviterName + " §8(" + roleColor(row.inviterRole) + row.inviterRole.name() + "§8)",
-                                "",
-                                "§7Klick: §aAnnehmen",
-                                "§7Shift-Klick: §cAblehnen"
-                        ),
+                        plugin.lang().get("gui.invites.request.name", "player", targetName),
+                        plugin.lang().getList("gui.invites.request.lore",
+                                "inviter", inviterName,
+                                "role_color", roleColor(row.inviterRole),
+                                "role", plugin.lang().role(row.inviterRole)),
                         "INVITE", true, row.id);
             } else {
                 it = button(Material.PAPER,
-                        "§e§lInvite: §f" + row.clanName + " §8[§b" + row.clanTag + "§8]",
-                        java.util.Arrays.asList(
-                                "§7Eingeladen von: §f" + row.inviterName + " §8(" + roleColor(row.inviterRole) + row.inviterRole.name() + "§8)",
-                                "",
-                                "§7Klick: §aAnnehmen",
-                                "§7Shift-Klick: §cAblehnen"
-                        ),
+                        plugin.lang().get("gui.invites.invite.name", "clan", row.clanName, "tag", row.clanTag),
+                        plugin.lang().getList("gui.invites.invite.lore",
+                                "inviter", inviterName,
+                                "role_color", roleColor(row.inviterRole),
+                                "role", plugin.lang().role(row.inviterRole)),
                         "INVITE", true, row.id);
             }
 
@@ -212,8 +211,6 @@ public final class ClanInvitesMenu implements Listener {
     }
 
     private String roleColor(MemberRole r) {
-        if (r == MemberRole.LEADER) return "§6";
-        if (r == MemberRole.OFFICER) return "§b";
-        return "§7";
+        return plugin.lang().roleColor(r);
     }
 }
