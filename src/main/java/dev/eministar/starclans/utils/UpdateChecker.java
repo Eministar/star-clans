@@ -19,15 +19,16 @@ import java.net.URL;
 import java.nio.charset.StandardCharsets;
 
 public final class UpdateChecker {
-    private static final String VERSION_URL = "https://plugins.star-dev.xyz/starclans/version.txt";
-    private static final String PLUGIN_URL = "https://plugins.star-dev.xyz/starclans";
+    private static final String VERSION_URL = "https://hub.star-dev.xyz/starclans/version.txt";
+    private static final String PLUGIN_URL = "https://hub.star-dev.xyz/starclans";
     private static volatile String latestVersion;
     private static volatile String currentVersion;
     private static volatile boolean updateAvailable;
     private static volatile boolean listenerRegistered;
     private static volatile Lang lang;
 
-    private UpdateChecker() {}
+    private UpdateChecker() {
+    }
 
     public static void check(JavaPlugin plugin) {
         if (plugin instanceof dev.eministar.starclans.StarClans sc) {
