@@ -20,6 +20,8 @@ public final class ClanCommand implements CommandExecutor {
     private final ClanMemberManageMenu manageMenu;
     private final ClanSettingsMenu settingsMenu;
     private final ClanTagStyleMenu tagStyleMenu;
+    private final ClanBankMenu bankMenu;
+    private final ClanLeaderboardMenu leaderboardMenu;
 
     public ClanCommand(StarClans plugin,
                        ClanService service,
@@ -30,7 +32,9 @@ public final class ClanCommand implements CommandExecutor {
                        ClanMembersMenu membersMenu,
                        ClanMemberManageMenu manageMenu,
                        ClanTagStyleMenu tagStyleMenu,
-                       ClanSettingsMenu settingsMenu) {
+                       ClanSettingsMenu settingsMenu,
+                       ClanBankMenu bankMenu,
+                       ClanLeaderboardMenu leaderboardMenu) {
         this.plugin = plugin;
         this.service = service;
         this.repo = repo;
@@ -41,6 +45,8 @@ public final class ClanCommand implements CommandExecutor {
         this.manageMenu = manageMenu;
         this.settingsMenu = settingsMenu;
         this.tagStyleMenu = tagStyleMenu;
+        this.bankMenu = bankMenu;
+        this.leaderboardMenu = leaderboardMenu;
     }
 
     @Override
@@ -85,6 +91,55 @@ public final class ClanCommand implements CommandExecutor {
             });
             case "settings" -> settingsMenu.open(p);
             case "tagstyler", "tagstyle", "styler" -> tagStyleMenu.open(p);
+            case "bank" -> bankMenu.open(p);
+            case "leaderboard", "top" -> leaderboardMenu.open(p);
+            case "home" -> service.teleportHome(p, s -> p.sendMessage(plugin.lang().prefixedRaw(s)));
+            case "sethome" -> service.setHome(p, s -> p.sendMessage(plugin.lang().prefixedRaw(s)));
+
+            case "deposit" -> {
+                if (args.length < 2) {
+                    p.sendMessage(plugin.lang().prefixed("messages.bank.deposit_usage"));
+                    return true;
+                }
+                double amount;
+                try {
+                    amount = Double.parseDouble(args[1]);
+                } catch (Exception ex) {
+                    p.sendMessage(plugin.lang().prefixed("messages.invalid_amount"));
+                    return true;
+                }
+                service.deposit(p, amount, s -> p.sendMessage(plugin.lang().prefixedRaw(s)));
+            }
+
+            case "withdraw" -> {
+                if (args.length < 2) {
+                    p.sendMessage(plugin.lang().prefixed("messages.bank.withdraw_usage"));
+                    return true;
+                }
+                double amount;
+                try {
+                    amount = Double.parseDouble(args[1]);
+                } catch (Exception ex) {
+                    p.sendMessage(plugin.lang().prefixed("messages.invalid_amount"));
+                    return true;
+                }
+                service.withdraw(p, amount, s -> p.sendMessage(plugin.lang().prefixedRaw(s)));
+            }
+
+            case "tax" -> {
+                if (args.length < 2) {
+                    p.sendMessage(plugin.lang().prefixed("messages.tax.usage"));
+                    return true;
+                }
+                double rate;
+                try {
+                    rate = Double.parseDouble(args[1]);
+                } catch (Exception ex) {
+                    p.sendMessage(plugin.lang().prefixed("messages.invalid_number"));
+                    return true;
+                }
+                service.setTaxRate(p, rate, s -> p.sendMessage(plugin.lang().prefixedRaw(s)));
+            }
 
             case "chat" -> {
                 boolean on = service.toggleClanChat(p.getUniqueId());
@@ -104,13 +159,23 @@ public final class ClanCommand implements CommandExecutor {
                 service.invite(p, t, s -> p.sendMessage(plugin.lang().prefixedRaw(s)));
             }
 
+            case "join" -> {
+                if (args.length < 2) {
+                    p.sendMessage(plugin.lang().prefixed("messages.use.clan_join"));
+                    return true;
+                }
+                service.requestJoin(p, args[1], s -> p.sendMessage(plugin.lang().prefixedRaw(s)));
+            }
+
             case "accept" -> {
                 if (args.length < 2) {
                     p.sendMessage(plugin.lang().prefixed("messages.use.clan_accept"));
                     return true;
                 }
                 long id;
-                try { id = Long.parseLong(args[1]); } catch (Exception ex) {
+                try {
+                    id = Long.parseLong(args[1]);
+                } catch (Exception ex) {
                     p.sendMessage(plugin.lang().prefixed("messages.invalid_id"));
                     return true;
                 }
@@ -123,7 +188,9 @@ public final class ClanCommand implements CommandExecutor {
                     return true;
                 }
                 long id;
-                try { id = Long.parseLong(args[1]); } catch (Exception ex) {
+                try {
+                    id = Long.parseLong(args[1]);
+                } catch (Exception ex) {
                     p.sendMessage(plugin.lang().prefixed("messages.invalid_id"));
                     return true;
                 }
@@ -170,6 +237,19 @@ public final class ClanCommand implements CommandExecutor {
                     return true;
                 }
                 service.demote(p, t.getUniqueId(), s -> p.sendMessage(plugin.lang().prefixedRaw(s)));
+            }
+
+            case "transfer" -> {
+                if (args.length < 2) {
+                    p.sendMessage(plugin.lang().prefixed("messages.use.clan_transfer"));
+                    return true;
+                }
+                Player t = Bukkit.getPlayerExact(args[1]);
+                if (t == null) {
+                    p.sendMessage(plugin.lang().prefixed("messages.not_online"));
+                    return true;
+                }
+                service.transferLeader(p, t.getUniqueId(), s -> p.sendMessage(plugin.lang().prefixedRaw(s)));
             }
 
             default -> sendHelp(p);

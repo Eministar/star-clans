@@ -24,8 +24,11 @@ GUI-first clans, smart invites, tag styling, clan chat, and PlaceholderAPI suppo
 - **Polished GUIs** for creation, management, invites, members, and settings
 - **Clan chat** toggle for focused team comms
 - **Tag & suffix styling** for identity and rank flair
+- **Leader transfer** for safe ownership handover
+- **Open-Invite join requests** via command flow
 - **PlaceholderAPI** expansion for scoreboard/tab/list integrations
 - **Vault-ready** for economy features
+- **Discord webhook** for important clan events
 - **Update checker** with clickable OP chat buttons
 
 ## ⚙️ Requirements
@@ -46,6 +49,7 @@ GUI-first clans, smart invites, tag styling, clan chat, and PlaceholderAPI suppo
 /clan create               - Create a clan
 /clan invites              - View invites/requests
 /clan invite <player>      - Invite a player
+/clan join <clan>          - Send open-invite join request
 /clan accept <id>          - Accept invite/request
 /clan deny <id>            - Deny invite/request
 /clan members              - Open members list
@@ -59,6 +63,7 @@ GUI-first clans, smart invites, tag styling, clan chat, and PlaceholderAPI suppo
 /clan kick <player>        - Kick a member
 /clan promote <player>     - Promote a member
 /clan demote <player>      - Demote a member
+/clan transfer <player>    - Transfer leadership
 /clan leave                - Leave clan
 /clan disband              - Disband clan (leader only)
 

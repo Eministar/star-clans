@@ -1,5 +1,6 @@
 package dev.eministar.starclans.database;
 
+import dev.eministar.starclans.model.ClanProfile;
 import dev.eministar.starclans.model.MemberRole;
 
 import javax.sql.DataSource;
@@ -18,10 +19,12 @@ public final class ClanRepository {
         public final UUID inviterUuid;
         public final boolean requiresApproval;
         public final boolean pendingApproval;
+        public final long expiresAtMillis;
 
         public InviteRow(long id, long clanId, String clanName, String clanTag,
                          UUID targetUuid, UUID inviterUuid,
-                         boolean requiresApproval, boolean pendingApproval) {
+                         boolean requiresApproval, boolean pendingApproval,
+                         long expiresAtMillis) {
             this.id = id;
             this.clanId = clanId;
             this.clanName = clanName;
@@ -30,6 +33,35 @@ public final class ClanRepository {
             this.inviterUuid = inviterUuid;
             this.requiresApproval = requiresApproval;
             this.pendingApproval = pendingApproval;
+            this.expiresAtMillis = expiresAtMillis;
+        }
+    }
+
+    public static final class ClanLookupRow {
+        public final long clanId;
+        public final String clanName;
+        public final String clanTag;
+
+        public ClanLookupRow(long clanId, String clanName, String clanTag) {
+            this.clanId = clanId;
+            this.clanName = clanName == null ? "" : clanName;
+            this.clanTag = clanTag == null ? "" : clanTag;
+        }
+    }
+
+    public static final class ClanLeaderboardRow {
+        public final long clanId;
+        public final String name;
+        public final String tag;
+        public final double balance;
+        public final int memberCount;
+
+        public ClanLeaderboardRow(long clanId, String name, String tag, double balance, int memberCount) {
+            this.clanId = clanId;
+            this.name = name == null ? "" : name;
+            this.tag = tag == null ? "" : tag;
+            this.balance = balance;
+            this.memberCount = memberCount;
         }
     }
 
@@ -47,13 +79,13 @@ public final class ClanRepository {
 
     public static final class ClanSettingsRow {
         public final boolean openInvite;
-        public final boolean friendlyFire;
         public final String motd;
+        public final double taxRate;
 
-        public ClanSettingsRow(boolean openInvite, boolean friendlyFire, String motd) {
+        public ClanSettingsRow(boolean openInvite, String motd, double taxRate) {
             this.openInvite = openInvite;
-            this.friendlyFire = friendlyFire;
             this.motd = motd == null ? "" : motd;
+            this.taxRate = taxRate;
         }
     }
 
@@ -83,6 +115,13 @@ public final class ClanRepository {
     private String cClanName;
     private String cClanTag;
     private String cClanCreatedBy;
+    private String cClanBalance;
+    private String cClanHomeWorld;
+    private String cClanHomeX;
+    private String cClanHomeY;
+    private String cClanHomeZ;
+    private String cClanHomeYaw;
+    private String cClanHomePitch;
 
 
     private String cMembersClanId;
@@ -101,8 +140,8 @@ public final class ClanRepository {
 
     private String cSettingsClanId;
     private String cSettingsOpenInvite;
-    private String cSettingsFriendlyFire;
     private String cSettingsMotd;
+    private String cSettingsTaxRate;
 
     private String tCosmetics = "clan_cosmetics";
     private String cCosClanId;
@@ -133,6 +172,13 @@ public final class ClanRepository {
             cClanName = pick(clansCols, "name", "clan_name", "clanName");
             cClanTag = pick(clansCols, "tag", "clan_tag", "clanTag");
             cClanCreatedBy = pick(clansCols, "created_by", "createdBy", "creator_uuid", "created_by_uuid", "owner_uuid", "owner");
+            cClanBalance = pick(clansCols, "balance", "clan_balance", "money", "funds");
+            cClanHomeWorld = pick(clansCols, "home_world", "homeWorld", "world");
+            cClanHomeX = pick(clansCols, "home_x", "homeX", "x");
+            cClanHomeY = pick(clansCols, "home_y", "homeY", "y");
+            cClanHomeZ = pick(clansCols, "home_z", "homeZ", "z");
+            cClanHomeYaw = pick(clansCols, "home_yaw", "homeYaw", "yaw");
+            cClanHomePitch = pick(clansCols, "home_pitch", "homePitch", "pitch");
 
 
             cMembersClanId = pick(membersCols, "clan_id", "clanId", "id_clan");
@@ -151,8 +197,8 @@ public final class ClanRepository {
 
             cSettingsClanId = pick(settingsCols, "clan_id", "clanId");
             cSettingsOpenInvite = pick(settingsCols, "open_invite", "open_invites", "openinvites", "open");
-            cSettingsFriendlyFire = pick(settingsCols, "friendly_fire", "friendlyfire", "pvp", "ff");
             cSettingsMotd = pick(settingsCols, "motd", "clan_motd", "message", "msg");
+            cSettingsTaxRate = pick(settingsCols, "tax_rate", "taxRate", "tax");
 
             Set<String> cosCols = columns(tCosmetics);
 
@@ -167,6 +213,7 @@ public final class ClanRepository {
             require(tClans, cClanIdClans, "id/clan_id");
             require(tClans, cClanName, "name");
             require(tClans, cClanTag, "tag");
+            require(tClans, cClanBalance, "balance");
 
             require(tMembers, cMembersClanId, "clan_id");
             require(tMembers, cMemberUuid, "member_uuid/uuid");
@@ -216,7 +263,8 @@ public final class ClanRepository {
     }
 
     private String q(String name) {
-        if (name == null || !SAFE.matcher(name).matches()) throw new IllegalStateException("Unsafe identifier: " + name);
+        if (name == null || !SAFE.matcher(name).matches())
+            throw new IllegalStateException("Unsafe identifier: " + name);
         return "`" + name + "`";
     }
 
@@ -241,6 +289,10 @@ public final class ClanRepository {
         } catch (Exception ignored) {
             return "";
         }
+    }
+
+    private long toMillis(Timestamp ts) {
+        return ts == null ? 0L : ts.getTime();
     }
 
     public long getClanIdByMember(UUID member) throws Exception {
@@ -318,6 +370,25 @@ public final class ClanRepository {
             ps.setString(1, tag);
             try (ResultSet rs = ps.executeQuery()) {
                 return rs.next();
+            }
+        }
+    }
+
+    public ClanLookupRow findClanByNameOrTag(String input) throws Exception {
+        ensureResolved();
+        String raw = input == null ? "" : input.trim();
+        if (raw.isEmpty()) return null;
+
+        String sql = "SELECT " + q(cClanIdClans) + "," + q(cClanName) + "," + q(cClanTag) +
+                " FROM " + q(tClans) +
+                " WHERE LOWER(" + q(cClanName) + ")=LOWER(?) OR UPPER(" + q(cClanTag) + ")=UPPER(?) LIMIT 1";
+        try (Connection con = c();
+             PreparedStatement ps = con.prepareStatement(sql)) {
+            ps.setString(1, raw);
+            ps.setString(2, raw);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (!rs.next()) return null;
+                return new ClanLookupRow(rs.getLong(1), rs.getString(2), rs.getString(3));
             }
         }
     }
@@ -530,6 +601,27 @@ public final class ClanRepository {
         return -1;
     }
 
+    public long createJoinRequest(long clanId, UUID target, int minutes) throws Exception {
+        ensureResolved();
+        cleanupExpiredInvites();
+        int m = Math.max(1, minutes);
+        String sql = "INSERT INTO " + q(tInvites) + " (" + q(cInviteClanId) + "," + q(cInviteTargetUuid) + "," + q(cInviteInviterUuid) + "," + q(cInviteRequiresApproval) + "," + q(cInvitePendingApproval) + "," + q(cInviteExpiresAt) + ") VALUES (?,?,?,?,?,DATE_ADD(NOW(), INTERVAL ? MINUTE))";
+        try (Connection con = c();
+             PreparedStatement ps = con.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
+            ps.setLong(1, clanId);
+            ps.setString(2, target.toString());
+            ps.setString(3, target.toString());
+            ps.setBoolean(4, true);
+            ps.setBoolean(5, true);
+            ps.setInt(6, m);
+            ps.executeUpdate();
+            try (ResultSet rs = ps.getGeneratedKeys()) {
+                if (rs.next()) return rs.getLong(1);
+            }
+        }
+        return -1;
+    }
+
     public String getMemberName(UUID member) throws Exception {
         ensureResolved();
         String sql = "SELECT " + q(cMemberName) + " FROM " + q(tMembers) + " WHERE " + q(cMemberUuid) + "=? LIMIT 1";
@@ -544,6 +636,21 @@ public final class ClanRepository {
         }
     }
 
+    public boolean hasActiveInviteForTargetClan(UUID target, long clanId) throws Exception {
+        ensureResolved();
+        cleanupExpiredInvites();
+        String sql = "SELECT 1 FROM " + q(tInvites) +
+                " WHERE " + q(cInviteTargetUuid) + "=? AND " + q(cInviteClanId) + "=? AND " + q(cInviteExpiresAt) + " >= NOW() LIMIT 1";
+        try (Connection con = c();
+             PreparedStatement ps = con.prepareStatement(sql)) {
+            ps.setString(1, target.toString());
+            ps.setLong(2, clanId);
+            try (ResultSet rs = ps.executeQuery()) {
+                return rs.next();
+            }
+        }
+    }
+
     public InviteRow getInviteById(long inviteId, UUID target) throws Exception {
         return getInviteForTarget(inviteId, target);
     }
@@ -553,7 +660,7 @@ public final class ClanRepository {
         cleanupExpiredInvites();
         String sql = "SELECT i." + q(cInviteId) + ", i." + q(cInviteClanId) + ", c." + q(cClanName) + ", c." + q(cClanTag) +
                 ", i." + q(cInviteTargetUuid) + ", i." + q(cInviteInviterUuid) +
-                ", i." + q(cInviteRequiresApproval) + ", i." + q(cInvitePendingApproval) +
+                ", i." + q(cInviteRequiresApproval) + ", i." + q(cInvitePendingApproval) + ", i." + q(cInviteExpiresAt) +
                 " FROM " + q(tInvites) + " i JOIN " + q(tClans) + " c ON c." + q(cClanIdClans) + " = i." + q(cInviteClanId) +
                 " WHERE i." + q(cInviteId) + "=? AND i." + q(cInviteTargetUuid) + "=? AND i." + q(cInvitePendingApproval) + "=0 AND i." + q(cInviteExpiresAt) + " >= NOW() LIMIT 1";
         try (Connection con = c();
@@ -565,7 +672,8 @@ public final class ClanRepository {
                 return new InviteRow(
                         rs.getLong(1), rs.getLong(2), rs.getString(3), rs.getString(4),
                         UUID.fromString(rs.getString(5)), UUID.fromString(rs.getString(6)),
-                        readBool(rs, cInviteRequiresApproval), readBool(rs, cInvitePendingApproval)
+                        readBool(rs, cInviteRequiresApproval), readBool(rs, cInvitePendingApproval),
+                        toMillis(rs.getTimestamp(9))
                 );
             }
         }
@@ -576,7 +684,7 @@ public final class ClanRepository {
         cleanupExpiredInvites();
         String sql = "SELECT i." + q(cInviteId) + ", i." + q(cInviteClanId) + ", c." + q(cClanName) + ", c." + q(cClanTag) +
                 ", i." + q(cInviteTargetUuid) + ", i." + q(cInviteInviterUuid) +
-                ", i." + q(cInviteRequiresApproval) + ", i." + q(cInvitePendingApproval) +
+                ", i." + q(cInviteRequiresApproval) + ", i." + q(cInvitePendingApproval) + ", i." + q(cInviteExpiresAt) +
                 " FROM " + q(tInvites) + " i JOIN " + q(tClans) + " c ON c." + q(cClanIdClans) + " = i." + q(cInviteClanId) +
                 " WHERE i." + q(cInviteId) + "=? AND i." + q(cInviteClanId) + "=? AND i." + q(cInvitePendingApproval) + "=1 AND i." + q(cInviteExpiresAt) + " >= NOW() LIMIT 1";
         try (Connection con = c();
@@ -588,7 +696,8 @@ public final class ClanRepository {
                 return new InviteRow(
                         rs.getLong(1), rs.getLong(2), rs.getString(3), rs.getString(4),
                         UUID.fromString(rs.getString(5)), UUID.fromString(rs.getString(6)),
-                        readBool(rs, cInviteRequiresApproval), readBool(rs, cInvitePendingApproval)
+                        readBool(rs, cInviteRequiresApproval), readBool(rs, cInvitePendingApproval),
+                        toMillis(rs.getTimestamp(9))
                 );
             }
         }
@@ -602,7 +711,7 @@ public final class ClanRepository {
 
         String sql = "SELECT i." + q(cInviteId) + ", i." + q(cInviteClanId) + ", c." + q(cClanName) + ", c." + q(cClanTag) +
                 ", i." + q(cInviteTargetUuid) + ", i." + q(cInviteInviterUuid) +
-                ", i." + q(cInviteRequiresApproval) + ", i." + q(cInvitePendingApproval) +
+                ", i." + q(cInviteRequiresApproval) + ", i." + q(cInvitePendingApproval) + ", i." + q(cInviteExpiresAt) +
                 " FROM " + q(tInvites) + " i JOIN " + q(tClans) + " c ON c." + q(cClanIdClans) + " = i." + q(cInviteClanId) +
                 " WHERE i." + q(cInviteTargetUuid) + "=? AND i." + q(cInvitePendingApproval) + "=0 AND i." + q(cInviteExpiresAt) + " >= NOW()" + order;
 
@@ -615,7 +724,8 @@ public final class ClanRepository {
                     out.add(new InviteRow(
                             rs.getLong(1), rs.getLong(2), rs.getString(3), rs.getString(4),
                             UUID.fromString(rs.getString(5)), UUID.fromString(rs.getString(6)),
-                            readBool(rs, cInviteRequiresApproval), readBool(rs, cInvitePendingApproval)
+                            readBool(rs, cInviteRequiresApproval), readBool(rs, cInvitePendingApproval),
+                            toMillis(rs.getTimestamp(9))
                     ));
                 }
             }
@@ -631,7 +741,7 @@ public final class ClanRepository {
 
         String sql = "SELECT i." + q(cInviteId) + ", i." + q(cInviteClanId) + ", c." + q(cClanName) + ", c." + q(cClanTag) +
                 ", i." + q(cInviteTargetUuid) + ", i." + q(cInviteInviterUuid) +
-                ", i." + q(cInviteRequiresApproval) + ", i." + q(cInvitePendingApproval) +
+                ", i." + q(cInviteRequiresApproval) + ", i." + q(cInvitePendingApproval) + ", i." + q(cInviteExpiresAt) +
                 " FROM " + q(tInvites) + " i JOIN " + q(tClans) + " c ON c." + q(cClanIdClans) + " = i." + q(cInviteClanId) +
                 " WHERE i." + q(cInviteClanId) + "=? AND i." + q(cInvitePendingApproval) + "=1 AND i." + q(cInviteExpiresAt) + " >= NOW()" + order;
 
@@ -644,7 +754,8 @@ public final class ClanRepository {
                     out.add(new InviteRow(
                             rs.getLong(1), rs.getLong(2), rs.getString(3), rs.getString(4),
                             UUID.fromString(rs.getString(5)), UUID.fromString(rs.getString(6)),
-                            readBool(rs, cInviteRequiresApproval), readBool(rs, cInvitePendingApproval)
+                            readBool(rs, cInviteRequiresApproval), readBool(rs, cInvitePendingApproval),
+                            toMillis(rs.getTimestamp(9))
                     ));
                 }
             }
@@ -709,6 +820,32 @@ public final class ClanRepository {
         }
     }
 
+    public void transferLeadership(UUID currentLeader, UUID nextLeader) throws Exception {
+        ensureResolved();
+        try (Connection con = c()) {
+            con.setAutoCommit(false);
+            try {
+                String sql = "UPDATE " + q(tMembers) + " SET " + q(cMemberRole) + "=? WHERE " + q(cMemberUuid) + "=?";
+                try (PreparedStatement ps = con.prepareStatement(sql)) {
+                    ps.setString(1, MemberRole.LEADER.name());
+                    ps.setString(2, nextLeader.toString());
+                    ps.executeUpdate();
+                }
+                try (PreparedStatement ps = con.prepareStatement(sql)) {
+                    ps.setString(1, MemberRole.OFFICER.name());
+                    ps.setString(2, currentLeader.toString());
+                    ps.executeUpdate();
+                }
+                con.commit();
+            } catch (Exception e) {
+                con.rollback();
+                throw e;
+            } finally {
+                con.setAutoCommit(true);
+            }
+        }
+    }
+
     public void updateMemberName(UUID member, String name) throws Exception {
         ensureResolved();
         String sql = "UPDATE " + q(tMembers) + " SET " + q(cMemberName) + "=? WHERE " + q(cMemberUuid) + "=?";
@@ -727,11 +864,11 @@ public final class ClanRepository {
              PreparedStatement ps = con.prepareStatement(sql)) {
             ps.setLong(1, clanId);
             try (ResultSet rs = ps.executeQuery()) {
-                if (!rs.next()) return new ClanSettingsRow(false, false, "");
+                if (!rs.next()) return new ClanSettingsRow(false, "", 0.0);
                 boolean open = readBool(rs, cSettingsOpenInvite);
-                boolean ff = readBool(rs, cSettingsFriendlyFire);
                 String motd = readString(rs, cSettingsMotd);
-                return new ClanSettingsRow(open, ff, motd);
+                double tax = rs.getDouble(cSettingsTaxRate);
+                return new ClanSettingsRow(open, motd, tax);
             }
         }
     }
@@ -743,22 +880,6 @@ public final class ClanRepository {
         boolean next = !s.openInvite;
 
         String sql = "UPDATE " + q(tSettings) + " SET " + q(cSettingsOpenInvite) + "=? WHERE " + q(cSettingsClanId) + "=?";
-        try (Connection con = c();
-             PreparedStatement ps = con.prepareStatement(sql)) {
-            ps.setBoolean(1, next);
-            ps.setLong(2, clanId);
-            ps.executeUpdate();
-        }
-        return next;
-    }
-
-    public boolean toggleFriendlyFire(long clanId) throws Exception {
-        ensureResolved();
-        if (cSettingsFriendlyFire == null) return false;
-        ClanSettingsRow s = getSettings(clanId);
-        boolean next = !s.friendlyFire;
-
-        String sql = "UPDATE " + q(tSettings) + " SET " + q(cSettingsFriendlyFire) + "=? WHERE " + q(cSettingsClanId) + "=?";
         try (Connection con = c();
              PreparedStatement ps = con.prepareStatement(sql)) {
             ps.setBoolean(1, next);
@@ -783,5 +904,138 @@ public final class ClanRepository {
 
     public List<MemberRow> getMembers(long clanId) throws Exception {
         return listMembers(clanId);
+    }
+
+    public void deposit(long clanId, double amount) throws Exception {
+        ensureResolved();
+        String sql = "UPDATE " + q(tClans) + " SET " + q(cClanBalance) + "=" + q(cClanBalance) + "+? WHERE " + q(cClanIdClans) + "=?";
+        try (Connection con = c();
+             PreparedStatement ps = con.prepareStatement(sql)) {
+            ps.setDouble(1, amount);
+            ps.setLong(2, clanId);
+            ps.executeUpdate();
+        }
+    }
+
+    public void withdraw(long clanId, double amount) throws Exception {
+        ensureResolved();
+        String sql = "UPDATE " + q(tClans) + " SET " + q(cClanBalance) + "=" + q(cClanBalance) + "-? WHERE " + q(cClanIdClans) + "=?";
+        try (Connection con = c();
+             PreparedStatement ps = con.prepareStatement(sql)) {
+            ps.setDouble(1, amount);
+            ps.setLong(2, clanId);
+            ps.executeUpdate();
+        }
+    }
+
+    public void setHome(long clanId, String world, double x, double y, double z, float yaw, float pitch) throws Exception {
+        ensureResolved();
+        String sql = "UPDATE " + q(tClans) + " SET " + q(cClanHomeWorld) + "=?, " + q(cClanHomeX) + "=?, " + q(cClanHomeY) + "=?, " + q(cClanHomeZ) + "=?, " + q(cClanHomeYaw) + "=?, " + q(cClanHomePitch) + "=? WHERE " + q(cClanIdClans) + "=?";
+        try (Connection con = c();
+             PreparedStatement ps = con.prepareStatement(sql)) {
+            ps.setString(1, world);
+            ps.setDouble(2, x);
+            ps.setDouble(3, y);
+            ps.setDouble(4, z);
+            ps.setFloat(5, yaw);
+            ps.setFloat(6, pitch);
+            ps.setLong(7, clanId);
+            ps.executeUpdate();
+        }
+    }
+
+    public void setTaxRate(long clanId, double rate) throws Exception {
+        ensureResolved();
+        String sql = "UPDATE " + q(tSettings) + " SET " + q(cSettingsTaxRate) + "=? WHERE " + q(cSettingsClanId) + "=?";
+        try (Connection con = c();
+             PreparedStatement ps = con.prepareStatement(sql)) {
+            ps.setDouble(1, rate);
+            ps.setLong(2, clanId);
+            ps.executeUpdate();
+        }
+    }
+
+    public List<ClanLeaderboardRow> getTopClansByBalance(int limit) throws Exception {
+        ensureResolved();
+        String sql = "SELECT c." + q(cClanIdClans) + ", c." + q(cClanName) + ", c." + q(cClanTag) + ", c." + q(cClanBalance) + ", (SELECT COUNT(*) FROM " + q(tMembers) + " m WHERE m." + q(cMembersClanId) + " = c." + q(cClanIdClans) + ") as m_count " +
+                " FROM " + q(tClans) + " c ORDER BY c." + q(cClanBalance) + " DESC LIMIT ?";
+        List<ClanLeaderboardRow> out = new ArrayList<>();
+        try (Connection con = c();
+             PreparedStatement ps = con.prepareStatement(sql)) {
+            ps.setInt(1, limit);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    out.add(new ClanLeaderboardRow(rs.getLong(1), rs.getString(2), rs.getString(3), rs.getDouble(4), rs.getInt(5)));
+                }
+            }
+        }
+        return out;
+    }
+
+    public List<ClanLeaderboardRow> getTopClansByMembers(int limit) throws Exception {
+        ensureResolved();
+        String sql = "SELECT c." + q(cClanIdClans) + ", c." + q(cClanName) + ", c." + q(cClanTag) + ", c." + q(cClanBalance) + ", (SELECT COUNT(*) FROM " + q(tMembers) + " m WHERE m." + q(cMembersClanId) + " = c." + q(cClanIdClans) + ") as m_count " +
+                " FROM " + q(tClans) + " c ORDER BY m_count DESC LIMIT ?";
+        List<ClanLeaderboardRow> out = new ArrayList<>();
+        try (Connection con = c();
+             PreparedStatement ps = con.prepareStatement(sql)) {
+            ps.setInt(1, limit);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    out.add(new ClanLeaderboardRow(rs.getLong(1), rs.getString(2), rs.getString(3), rs.getDouble(4), rs.getInt(5)));
+                }
+            }
+        }
+        return out;
+    }
+
+    public ClanProfile getFullProfile(UUID uuid) throws Exception {
+        ensureResolved();
+        long clanId = getClanIdByMember(uuid);
+        int invites = countInvites(uuid);
+        if (clanId <= 0) return ClanProfile.none(invites);
+
+        String sql = "SELECT c." + q(cClanName) + ", c." + q(cClanTag) + ", c." + q(cClanBalance) + ", " +
+                "c." + q(cClanHomeWorld) + ", c." + q(cClanHomeX) + ", c." + q(cClanHomeY) + ", c." + q(cClanHomeZ) + ", " +
+                "c." + q(cClanHomeYaw) + ", c." + q(cClanHomePitch) + ", " +
+                "s." + q(cSettingsTaxRate) + ", " +
+                "(SELECT " + q(cMemberRole) + " FROM " + q(tMembers) + " WHERE " + q(cMemberUuid) + "=?) as role, " +
+                "(SELECT COUNT(*) FROM " + q(tMembers) + " WHERE " + q(cMembersClanId) + "=?) as m_count " +
+                " FROM " + q(tClans) + " c " +
+                " LEFT JOIN " + q(tSettings) + " s ON s." + q(cSettingsClanId) + "=c." + q(cClanIdClans) +
+                " WHERE c." + q(cClanIdClans) + "=? LIMIT 1";
+
+        try (Connection con = c();
+             PreparedStatement ps = con.prepareStatement(sql)) {
+            ps.setString(1, uuid.toString());
+            ps.setLong(2, clanId);
+            ps.setLong(3, clanId);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    String name = rs.getString(1);
+                    String tag = rs.getString(2);
+                    double bal = rs.getDouble(3);
+                    String world = rs.getString(4);
+                    double x = rs.getDouble(5);
+                    double y = rs.getDouble(6);
+                    double z = rs.getDouble(7);
+                    float yaw = rs.getFloat(8);
+                    float pitch = rs.getFloat(9);
+                    double tax = rs.getDouble(10);
+                    MemberRole role = MemberRole.MEMBER;
+                    String roleStr = rs.getString(11);
+                    if (roleStr != null) {
+                        try {
+                            role = MemberRole.valueOf(roleStr);
+                        } catch (Exception ignored) {
+                        }
+                    }
+                    int members = rs.getInt(12);
+
+                    return new ClanProfile(true, clanId, name, tag, role, members, invites, bal, world, x, y, z, yaw, pitch, tax);
+                }
+            }
+        }
+        return ClanProfile.none(invites);
     }
 }

@@ -13,8 +13,9 @@ import java.util.List;
 public final class ClanTabCompleter implements TabCompleter {
 
     private static final List<String> ROOT = Arrays.asList(
-            "create","invites","members","manage","settings","tagstyler","tagstyle","styler",
-            "invite","accept","deny","chat","leave","disband","kick","promote","demote"
+            "create", "invites", "members", "manage", "settings", "tagstyler", "tagstyle", "styler",
+            "invite", "join", "accept", "deny", "chat", "leave", "disband", "kick", "promote", "demote", "transfer",
+            "bank", "deposit", "withdraw", "home", "sethome", "leaderboard", "top", "tax"
     );
 
     @Override
@@ -25,7 +26,7 @@ public final class ClanTabCompleter implements TabCompleter {
 
         if (args.length == 2) {
             String sub = args[0].toLowerCase();
-            if (sub.equals("invite") || sub.equals("kick") || sub.equals("promote") || sub.equals("demote") || sub.equals("members")) {
+            if (sub.equals("invite") || sub.equals("kick") || sub.equals("promote") || sub.equals("demote") || sub.equals("members") || sub.equals("transfer")) {
                 List<String> names = new ArrayList<>();
                 for (Player p : Bukkit.getOnlinePlayers()) names.add(p.getName());
                 return filter(names, args[1]);

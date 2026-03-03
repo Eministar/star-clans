@@ -48,7 +48,7 @@ public final class ClanMainMenu implements Listener {
 
         for (int i = 0; i < 54; i++) inv.setItem(i, fill);
 
-        int[] frame = {0,1,2,3,4,5,6,7,8, 9,17, 18,26, 27,35, 36,44, 45,46,47,48,49,50,51,52,53};
+        int[] frame = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 17, 18, 26, 27, 35, 36, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53};
         for (int slot : frame) inv.setItem(slot, border);
 
         if (!profile.inClan) {
@@ -71,10 +71,14 @@ public final class ClanMainMenu implements Listener {
 
             String invLine = profile.inviteCount <= 0
                     ? plugin.lang().get("gui.main.invites.none")
-                    : plugin.lang().get("gui.main.invites.some", "count", profile.inviteCount);
+                    : plugin.lang().get("gui.main.invites.some", "count", Integer.valueOf(profile.inviteCount));
             inv.setItem(24, button(Material.PAPER, plugin.lang().get("gui.main.invites.name"),
                     plugin.lang().getList("gui.main.invites.lore", "invites_line", invLine),
                     "INVITES", profile.inviteCount > 0));
+
+            inv.setItem(10, button(Material.GOLD_BLOCK, plugin.lang().get("gui.main.leaderboard.name"),
+                    plugin.lang().getList("gui.main.leaderboard.lore"),
+                    "LEADERBOARD", true));
 
             inv.setItem(49, button(Material.BARRIER, plugin.lang().get("gui.main.close.name"),
                     plugin.lang().getList("gui.main.close.lore"), "CLOSE", false));
@@ -85,7 +89,7 @@ public final class ClanMainMenu implements Listener {
                             "clan_name", profile.clanName,
                             "clan_tag", profile.clanTag,
                             "role", plugin.lang().role(profile.role),
-                            "members", profile.memberCount),
+                            "members", Integer.valueOf(profile.memberCount)),
                     "MANAGE", true));
 
             inv.setItem(20, button(Material.PLAYER_HEAD, plugin.lang().get("gui.main.members.name"),
@@ -94,10 +98,25 @@ public final class ClanMainMenu implements Listener {
 
             String invLine = profile.inviteCount <= 0
                     ? plugin.lang().get("gui.main.invites.none")
-                    : plugin.lang().get("gui.main.invites.some", "count", profile.inviteCount);
+                    : plugin.lang().get("gui.main.invites.some", "count", Integer.valueOf(profile.inviteCount));
             inv.setItem(24, button(Material.PAPER, plugin.lang().get("gui.main.invites.name"),
                     plugin.lang().getList("gui.main.invites.lore_in_clan", "invites_line", invLine),
                     "INVITES", profile.inviteCount > 0));
+
+            inv.setItem(21, button(Material.CHEST, plugin.lang().get("gui.main.bank.name"),
+                    plugin.lang().getList("gui.main.bank.lore", "balance", service.money(profile.balance)),
+                    "BANK", false));
+
+            inv.setItem(23, button(Material.WHITE_BED, plugin.lang().get("gui.main.home.name"),
+                    plugin.lang().getList("gui.main.home.lore", "status",
+                            (profile.homeWorld == null || profile.homeWorld.isEmpty())
+                                    ? plugin.lang().get("gui.main.home.not_set")
+                                    : plugin.lang().get("gui.main.home.set")),
+                    "HOME", false));
+
+            inv.setItem(10, button(Material.GOLD_BLOCK, plugin.lang().get("gui.main.leaderboard.name"),
+                    plugin.lang().getList("gui.main.leaderboard.lore"),
+                    "LEADERBOARD", true));
 
             boolean chatOn = service.isClanChat(player.getUniqueId());
             inv.setItem(31, button(Material.OAK_SIGN,
@@ -149,6 +168,24 @@ public final class ClanMainMenu implements Listener {
         if (action.equals("MEMBERS")) {
             p.closeInventory();
             p.performCommand("clan members");
+            return;
+        }
+
+        if (action.equals("BANK")) {
+            p.closeInventory();
+            p.performCommand("clan bank");
+            return;
+        }
+
+        if (action.equals("HOME")) {
+            p.closeInventory();
+            p.performCommand("clan home");
+            return;
+        }
+
+        if (action.equals("LEADERBOARD")) {
+            p.closeInventory();
+            p.performCommand("clan leaderboard");
             return;
         }
 

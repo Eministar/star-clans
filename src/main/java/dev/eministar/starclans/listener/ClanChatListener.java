@@ -3,6 +3,7 @@ package dev.eministar.starclans.listener;
 import dev.eministar.starclans.StarClans;
 import dev.eministar.starclans.database.ClanRepository;
 import dev.eministar.starclans.service.ClanService;
+import dev.eministar.starclans.utils.LoggerUtil;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -59,7 +60,7 @@ public final class ClanChatListener implements Listener {
                 });
 
             } catch (Exception ex) {
-                ex.printStackTrace();
+                LoggerUtil.error("Fehler im Clan-Chat Listener!", ex);
             }
         });
     }

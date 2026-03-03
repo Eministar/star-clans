@@ -4,6 +4,7 @@ import dev.eministar.starclans.StarClans;
 import dev.eministar.starclans.database.ClanRepository;
 import dev.eministar.starclans.model.MemberRole;
 import dev.eministar.starclans.service.ClanService;
+import dev.eministar.starclans.utils.LoggerUtil;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.Sound;
@@ -29,6 +30,7 @@ public final class ClanSettingsMenu implements Listener {
     private final ClanMainMenu mainMenu;
 
     private final Set<UUID> motdEdit = ConcurrentHashMap.newKeySet();
+    private final Set<UUID> taxEdit = ConcurrentHashMap.newKeySet();
     private String title;
 
     public ClanSettingsMenu(StarClans plugin, ClanService service, ClanRepository repo, ClanMainMenu mainMenu) {
@@ -55,8 +57,8 @@ public final class ClanSettingsMenu implements Listener {
                 ClanRepository.ClanSettingsRow s = repo.getSettings(clanId);
                 Bukkit.getScheduler().runTask(plugin, () -> openInv(p, role, s));
             } catch (Exception e) {
-                e.printStackTrace();
-                Bukkit.getScheduler().runTask(plugin, () -> p.sendMessage(plugin.lang().prefixed("messages.error_console")));
+                LoggerUtil.error("Fehler im ClanSettingsMenu für " + p.getName(), e);
+                Bukkit.getScheduler().runTask(plugin, () -> p.sendMessage(plugin.lang().error("messages.error_console")));
             }
         });
     }
@@ -77,6 +79,7 @@ public final class ClanSettingsMenu implements Listener {
 
         inv.setItem(21, can ? toggle(plugin.lang().get("gui.settings.open_invite.name"), s.openInvite) : locked(plugin.lang().get("gui.settings.locked")));
         inv.setItem(23, members());
+        inv.setItem(25, can ? tax(s.taxRate) : locked(plugin.lang().get("gui.settings.locked")));
         inv.setItem(31, invites());
 
         p.openInventory(inv);
@@ -142,6 +145,14 @@ public final class ClanSettingsMenu implements Listener {
             p.closeInventory();
             p.performCommand("clan invites");
             p.playSound(p.getLocation(), Sound.UI_BUTTON_CLICK, 0.8f, 1.6f);
+            return;
+        }
+
+        if (slot == 25) {
+            taxEdit.add(p.getUniqueId());
+            p.closeInventory();
+            p.sendMessage(plugin.lang().prefixed("messages.tax.prompt"));
+            p.playSound(p.getLocation(), Sound.UI_BUTTON_CLICK, 0.8f, 1.6f);
         }
     }
 
@@ -150,29 +161,58 @@ public final class ClanSettingsMenu implements Listener {
         Player p = e.getPlayer();
         UUID u = p.getUniqueId();
 
-        if (!motdEdit.contains(u)) return;
+        if (motdEdit.contains(u)) {
+            e.setCancelled(true);
+            motdEdit.remove(u);
 
-        e.setCancelled(true);
-        motdEdit.remove(u);
+            String msg = e.getMessage();
+            if (msg.equalsIgnoreCase("cancel")) {
+                Bukkit.getScheduler().runTask(plugin, () -> {
+                    p.sendMessage(plugin.lang().prefixed("messages.motd.cancelled"));
+                    open(p);
+                });
+                return;
+            }
 
-        String msg = e.getMessage();
-        if (msg.equalsIgnoreCase("cancel")) {
-            Bukkit.getScheduler().runTask(plugin, () -> {
-                p.sendMessage(plugin.lang().prefixed("messages.motd.cancelled"));
+            service.setMotd(p, msg, s -> {
+                p.sendMessage(plugin.lang().prefixedRaw(s));
                 open(p);
             });
             return;
         }
 
-        service.setMotd(p, msg, s -> {
-            p.sendMessage(plugin.lang().prefixedRaw(s));
-            open(p);
-        });
+        if (taxEdit.contains(u)) {
+            e.setCancelled(true);
+            taxEdit.remove(u);
+
+            String msg = e.getMessage();
+            if (msg.equalsIgnoreCase("cancel")) {
+                Bukkit.getScheduler().runTask(plugin, () -> {
+                    p.sendMessage(plugin.lang().prefixed("messages.tax.cancelled"));
+                    open(p);
+                });
+                return;
+            }
+
+            try {
+                double rate = Double.parseDouble(msg);
+                service.setTaxRate(p, rate, s -> {
+                    p.sendMessage(plugin.lang().prefixedRaw(s));
+                    open(p);
+                });
+            } catch (Exception ex) {
+                Bukkit.getScheduler().runTask(plugin, () -> {
+                    p.sendMessage(plugin.lang().prefixed("messages.tax.invalid_number"));
+                    open(p);
+                });
+            }
+        }
     }
 
     @EventHandler
     public void onQuit(PlayerQuitEvent e) {
         motdEdit.remove(e.getPlayer().getUniqueId());
+        taxEdit.remove(e.getPlayer().getUniqueId());
     }
 
     private ItemStack motd(String motd) {
@@ -247,6 +287,17 @@ public final class ClanSettingsMenu implements Listener {
         if (meta != null) {
             meta.setDisplayName(plugin.lang().get("gui.settings.invites.name"));
             meta.setLore(plugin.lang().getList("gui.settings.invites.lore"));
+            it.setItemMeta(meta);
+        }
+        return it;
+    }
+
+    private ItemStack tax(double rate) {
+        ItemStack it = new ItemStack(Material.GOLD_INGOT);
+        ItemMeta meta = it.getItemMeta();
+        if (meta != null) {
+            meta.setDisplayName(plugin.lang().get("gui.settings.tax.name"));
+            meta.setLore(plugin.lang().getList("gui.settings.tax.lore", "rate", Double.valueOf(rate)));
             it.setItemMeta(meta);
         }
         return it;

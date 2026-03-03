@@ -4,13 +4,16 @@ import dev.eministar.starclans.command.CommandRegister;
 import dev.eministar.starclans.database.ClanRepository;
 import dev.eministar.starclans.database.HikariProvider;
 import dev.eministar.starclans.database.SQL;
+import dev.eministar.starclans.discord.DiscordWebhookClient;
 import dev.eministar.starclans.gui.*;
 import dev.eministar.starclans.listener.GlobalChatListener;
 import dev.eministar.starclans.listener.ProfilePreloadListener;
+import dev.eministar.starclans.listener.TaxListener;
 import dev.eministar.starclans.placeholder.StarClansExpansion;
 import dev.eministar.starclans.service.ClanService;
 import dev.eministar.starclans.utils.Banner;
 import dev.eministar.starclans.utils.Lang;
+import dev.eministar.starclans.utils.LoggerUtil;
 import dev.eministar.starclans.utils.UpdateChecker;
 import dev.eministar.starclans.utils.Version;
 import dev.eministar.starclans.vault.VaultHook;
@@ -22,6 +25,7 @@ public final class StarClans extends JavaPlugin {
     private ClanRepository repo;
     private ClanService service;
     private Lang lang;
+    private DiscordWebhookClient discord;
 
     private ClanMainMenu mainMenu;
     private ClanCreateMenu createMenu;
@@ -30,11 +34,15 @@ public final class StarClans extends JavaPlugin {
     private ClanMemberManageMenu manageMenu;
     private ClanSettingsMenu settingsMenu;
     private ClanTagStyleMenu tagStyleMenu;
+    private ClanBankMenu bankMenu;
+    private ClanLeaderboardMenu leaderboardMenu;
 
     @Override
     public void onEnable() {
+        LoggerUtil.init(this);
         saveDefaultConfig();
         this.lang = new Lang(this);
+        this.discord = new DiscordWebhookClient(this);
 
         Version.init(this);
         UpdateChecker.check(this);
@@ -46,12 +54,12 @@ public final class StarClans extends JavaPlugin {
             try {
                 SQL.initSchema(HikariProvider.get());
             } catch (Exception e) {
-                e.printStackTrace();
+                LoggerUtil.error("Die Datenbank konnte nicht initialisiert werden!", e);
                 getServer().getPluginManager().disablePlugin(this);
                 return;
             }
         } else {
-            getLogger().warning("Database disabled or not ready. StarClans will run limited.");
+            LoggerUtil.warn("Datenbank ist deaktiviert oder nicht bereit. StarClans läuft im eingeschränkten Modus.");
         }
 
         this.repo = new ClanRepository(HikariProvider.get());
@@ -67,6 +75,8 @@ public final class StarClans extends JavaPlugin {
         this.membersMenu.bindManageMenu(manageMenu);
 
         this.settingsMenu = new ClanSettingsMenu(this, service, repo, mainMenu);
+        this.bankMenu = new ClanBankMenu(this, service);
+        this.leaderboardMenu = new ClanLeaderboardMenu(this, service);
 
         getServer().getPluginManager().registerEvents(mainMenu, this);
         getServer().getPluginManager().registerEvents(createMenu, this);
@@ -75,31 +85,34 @@ public final class StarClans extends JavaPlugin {
         getServer().getPluginManager().registerEvents(manageMenu, this);
         getServer().getPluginManager().registerEvents(settingsMenu, this);
         getServer().getPluginManager().registerEvents(tagStyleMenu, this);
+        getServer().getPluginManager().registerEvents(bankMenu, this);
+        getServer().getPluginManager().registerEvents(leaderboardMenu, this);
 
-        getServer().getPluginManager().registerEvents(new ProfilePreloadListener(service), this);
+        getServer().getPluginManager().registerEvents(new ProfilePreloadListener(this, service, repo), this);
         getServer().getPluginManager().registerEvents(new GlobalChatListener(this, service, repo), this);
+        getServer().getPluginManager().registerEvents(new TaxListener(this, service), this);
 
         CommandRegister.register(
                 this, service, repo,
                 mainMenu, createMenu, invitesMenu, membersMenu, manageMenu,
-                tagStyleMenu, settingsMenu
+                tagStyleMenu, settingsMenu, bankMenu, leaderboardMenu
         );
 
         if (Bukkit.getPluginManager().getPlugin("PlaceholderAPI") != null) {
             new StarClansExpansion(this, service, repo).register();
-            getLogger().info("PlaceholderAPI expansion registered.");
+            LoggerUtil.success("PlaceholderAPI Erweiterung wurde erfolgreich registriert.");
         } else {
-            getLogger().warning("PlaceholderAPI not found. Placeholders disabled.");
+            LoggerUtil.warn("PlaceholderAPI wurde nicht gefunden. Platzhalter sind deaktiviert.");
         }
 
         Banner.print(this);
-        getLogger().info("StarClans enabled.");
+        LoggerUtil.success("StarClans wurde erfolgreich aktiviert.");
     }
 
     @Override
     public void onDisable() {
         HikariProvider.shutdown();
-        getLogger().info("StarClans disabled.");
+        LoggerUtil.info("StarClans wurde deaktiviert.");
     }
 
     public ClanRepository repo() {
@@ -112,5 +125,9 @@ public final class StarClans extends JavaPlugin {
 
     public Lang lang() {
         return lang;
+    }
+
+    public DiscordWebhookClient discord() {
+        return discord;
     }
 }

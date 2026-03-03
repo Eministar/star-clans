@@ -3,6 +3,7 @@ package dev.eministar.starclans.gui;
 import dev.eministar.starclans.StarClans;
 import dev.eministar.starclans.database.ClanRepository;
 import dev.eministar.starclans.model.MemberRole;
+import dev.eministar.starclans.utils.LoggerUtil;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
@@ -31,9 +32,12 @@ public final class ClanInvitesMenu implements Listener {
         final String inviterName;
         final MemberRole inviterRole;
         final boolean approvalView;
+        final boolean selfRequest;
+        final String expiresIn;
 
         InviteDisplay(long id, String clanName, String clanTag, UUID targetUuid,
-                      String inviterName, MemberRole inviterRole, boolean approvalView) {
+                      String inviterName, MemberRole inviterRole, boolean approvalView, boolean selfRequest,
+                      String expiresIn) {
             this.id = id;
             this.clanName = clanName;
             this.clanTag = clanTag;
@@ -41,6 +45,8 @@ public final class ClanInvitesMenu implements Listener {
             this.inviterName = inviterName;
             this.inviterRole = inviterRole == null ? MemberRole.MEMBER : inviterRole;
             this.approvalView = approvalView;
+            this.selfRequest = selfRequest;
+            this.expiresIn = expiresIn == null ? "-" : expiresIn;
         }
     }
 
@@ -74,11 +80,17 @@ public final class ClanInvitesMenu implements Listener {
 
                     List<InviteDisplay> display = new java.util.ArrayList<>();
                     for (ClanRepository.InviteRow row : invites) {
-                        String inviterName = approvals ? repo.getMemberName(row.inviterUuid) : repo.getMemberName(row.inviterUuid);
-                        MemberRole inviterRole = approvals ? repo.getRole(row.inviterUuid) : repo.getRole(row.inviterUuid);
+                        boolean selfRequest = row.targetUuid != null && row.targetUuid.equals(row.inviterUuid);
+                        String inviterName;
+                        MemberRole inviterRole;
+
+                        inviterName = repo.getMemberName(row.inviterUuid);
+                        inviterRole = selfRequest ? MemberRole.MEMBER : repo.getRole(row.inviterUuid);
+
+                        String expiresIn = formatRemaining(row.expiresAtMillis - System.currentTimeMillis());
                         display.add(new InviteDisplay(
                                 row.id, row.clanName, row.clanTag, row.targetUuid,
-                                inviterName, inviterRole, approvals
+                                inviterName, inviterRole, approvals, selfRequest, expiresIn
                         ));
                     }
                     Bukkit.getScheduler().runTask(plugin, new Runnable() {
@@ -88,14 +100,11 @@ public final class ClanInvitesMenu implements Listener {
                         }
                     });
                 } catch (Exception e) {
-                    Bukkit.getScheduler().runTask(plugin, new Runnable() {
-                        @Override
-                        public void run() {
-                            p.sendMessage(plugin.lang().prefixed("messages.load_failed_short"));
-                            p.playSound(p.getLocation(), Sound.ENTITY_VILLAGER_NO, 0.8f, 1.0f);
-                        }
+                    Bukkit.getScheduler().runTask(plugin, () -> {
+                        p.sendMessage(plugin.lang().error("messages.load_failed_short"));
+                        p.playSound(p.getLocation(), Sound.ENTITY_VILLAGER_NO, 0.8f, 1.0f);
                     });
-                    e.printStackTrace();
+                    LoggerUtil.error("Fehler beim Laden der Einladungen für " + p.getName(), e);
                 }
             }
         });
@@ -127,14 +136,20 @@ public final class ClanInvitesMenu implements Listener {
             if (targetName == null) targetName = plugin.lang().get("messages.generic_unknown");
 
             ItemStack it;
-            String inviterName = row.inviterName == null ? plugin.lang().get("messages.generic_unknown") : row.inviterName;
+            String inviterName;
+            if (row.selfRequest) {
+                inviterName = targetName;
+            } else {
+                inviterName = row.inviterName == null ? plugin.lang().get("messages.generic_unknown") : row.inviterName;
+            }
             if (row.approvalView) {
                 it = button(Material.PAPER,
                         plugin.lang().get("gui.invites.request.name", "player", targetName),
                         plugin.lang().getList("gui.invites.request.lore",
                                 "inviter", inviterName,
                                 "role_color", roleColor(row.inviterRole),
-                                "role", plugin.lang().role(row.inviterRole)),
+                                "role", plugin.lang().role(row.inviterRole),
+                                "expires", row.expiresIn),
                         "INVITE", true, row.id);
             } else {
                 it = button(Material.PAPER,
@@ -142,7 +157,8 @@ public final class ClanInvitesMenu implements Listener {
                         plugin.lang().getList("gui.invites.invite.lore",
                                 "inviter", inviterName,
                                 "role_color", roleColor(row.inviterRole),
-                                "role", plugin.lang().role(row.inviterRole)),
+                                "role", plugin.lang().role(row.inviterRole),
+                                "expires", row.expiresIn),
                         "INVITE", true, row.id);
             }
 
@@ -212,5 +228,13 @@ public final class ClanInvitesMenu implements Listener {
 
     private String roleColor(MemberRole r) {
         return plugin.lang().roleColor(r);
+    }
+
+    private String formatRemaining(long millis) {
+        long s = Math.max(0L, millis / 1000L);
+        long min = s / 60L;
+        long sec = s % 60L;
+        if (min > 0) return min + "m " + sec + "s";
+        return sec + "s";
     }
 }

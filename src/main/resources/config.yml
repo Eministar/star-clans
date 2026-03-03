@@ -1,10 +1,30 @@
+# +----------------------------------------------------------------------------------------------+
+# |                                                                                              |
+# |                                     StarClans Configuration                                  |
+# |                                                                                              |
+# |   Hier kannst du alle grundlegenden Einstellungen für das StarClans-Plugin vornehmen.        |
+# |   Bitte achte darauf, dass die Syntax korrekt bleibt, um Fehler beim Laden zu vermeiden.      |
+# |                                                                                              |
+# +----------------------------------------------------------------------------------------------+
+
+# Einstellungen für die Datenbankverbindung.
+# Das Plugin unterstützt MariaDB und MySQL.
 database:
+  # Ob die Datenbank genutzt werden soll. Wenn false, wird das Plugin nur eingeschränkt funktionieren.
   enabled: true
+  # Die Adresse des Datenbank-Servers.
   host: "127.0.0.1"
+  # Der Port der Datenbank (Standard: 3306).
   port: 3306
+  # Der Name der Datenbank, die genutzt werden soll.
   name: "starclans"
+  # Der Benutzername für den Datenbankzugriff.
   username: "root"
+  # Das Passwort für den Datenbankzugriff.
   password: "password"
+  
+  # Erweiterte Einstellungen für den Connection-Pool (HikariCP).
+  # Nur ändern, wenn du weißt, was du tust!
   pool:
     maxPoolSize: 10
     minIdle: 2
@@ -12,13 +32,77 @@ database:
     idleTimeoutMs: 600000
     maxLifetimeMs: 1800000
 
+# Allgemeine Clan-Einstellungen.
 clan:
+  # Alles rund um die Erstellung eines Clans.
   creation:
+    # Die Kosten in der Ingame-Währung (erfordert Vault & Economy-Plugin).
     cost: 25000.0
+    # Minimale und maximale Länge des Clan-Namens.
     minNameLen: 3
     maxNameLen: 16
+    # Minimale und maximale Länge des Clan-Tags.
     minTagLen: 2
     maxTagLen: 5
 
+  # Einstellungen für Einladungen.
+  invite:
+    # Wie lange eine Einladung gültig bleibt (in Minuten).
+    expireMinutes: 60
+    # Cooldown zwischen zwei Einladungen eines Spielers (in Sekunden).
+    cooldownSeconds: 20
+
+  # Einstellungen für Beitrittsanfragen (Open-Invite Modus).
+  joinRequest:
+    # Cooldown zwischen zwei Beitrittsanfragen eines Spielers (in Sekunden).
+    cooldownSeconds: 20
+
+  # Einstellungen für das Clan-Home System.
+  home:
+    # Die Kosten für das Setzen eines neuen Clan-Homes.
+    setCost: 5000.0
+    # Die Kosten für den Teleport zum Clan-Home.
+    teleportCost: 0.0
+    # Mindest-Rang zum Setzen des Homes (LEADER, OFFICER, MEMBER)
+    minRoleSet: "OFFICER"
+    # Mindest-Rang zum Teleportieren zum Home (LEADER, OFFICER, MEMBER)
+    minRoleTeleport: "MEMBER"
+
+  # Einstellungen für das Tag-Design.
+  tag:
+    # Mindest-Rang zum Ändern des Clan-Tags / Styles (LEADER, OFFICER, MEMBER)
+    minRoleChange: "OFFICER"
+
+# Bestenliste-Einstellungen.
+leaderboard:
+  # Wie viele Clans in der Bestenliste angezeigt werden sollen (max. 28 für das GUI).
+  limit: 10
+
+# Discord-Integration über Webhooks.
+discord:
+  webhook:
+    # Ob die Discord-Integration aktiviert ist.
+    enabled: false
+    # Die Webhook-URL von deinem Discord-Server.
+    url: ""
+    # Der Name, unter dem der Webhook postet.
+    username: "StarClans Notifications"
+    # Die URL zum Avatar des Webhooks.
+    avatarUrl: ""
+    # Die ID einer Rolle, die bei wichtigen Events erwähnt werden soll.
+    mentionRoleId: ""
+    # Timeout für Webhook-Anfragen (in Millisekunden).
+    timeoutMs: 5000
+    
+    # Welche Events sollen im Discord geloggt werden?
+    events:
+      join: true
+      leave: true
+      kick: true
+      transfer: true
+      war: true
+
+# Sprach-Einstellungen.
 lang:
+  # Die Datei, aus der die Nachrichten geladen werden sollen.
   file: "lang.yml"

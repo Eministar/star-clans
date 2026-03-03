@@ -20,59 +20,67 @@ public final class SQL {
         try (Connection con = ds.getConnection()) {
             try (Statement st = con.createStatement()) {
                 st.execute("""
-                    CREATE TABLE IF NOT EXISTS clans (
-                        id BIGINT AUTO_INCREMENT PRIMARY KEY,
-                        name VARCHAR(16) NOT NULL,
-                        tag VARCHAR(5) NOT NULL,
-                        created_by CHAR(36) NOT NULL,
-                        created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                        UNIQUE KEY uk_clans_name (name),
-                        UNIQUE KEY uk_clans_tag (tag)
-                    ) ENGINE=InnoDB DEFAULT CHARSET=%s COLLATE=%s
-                """.formatted(CHARSET, COLLATE));
+                            CREATE TABLE IF NOT EXISTS clans (
+                                id BIGINT AUTO_INCREMENT PRIMARY KEY,
+                                name VARCHAR(16) NOT NULL,
+                                tag VARCHAR(5) NOT NULL,
+                                balance DOUBLE NOT NULL DEFAULT 0.0,
+                                home_world VARCHAR(64) DEFAULT NULL,
+                                home_x DOUBLE DEFAULT 0,
+                                home_y DOUBLE DEFAULT 0,
+                                home_z DOUBLE DEFAULT 0,
+                                home_yaw FLOAT DEFAULT 0,
+                                home_pitch FLOAT DEFAULT 0,
+                                created_by CHAR(36) NOT NULL,
+                                created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                                UNIQUE KEY uk_clans_name (name),
+                                UNIQUE KEY uk_clans_tag (tag)
+                            ) ENGINE=InnoDB DEFAULT CHARSET=%s COLLATE=%s
+                        """.formatted(CHARSET, COLLATE));
 
                 st.execute("""
-                    CREATE TABLE IF NOT EXISTS clan_members (
-                        clan_id BIGINT NOT NULL,
-                        member_uuid CHAR(36) NOT NULL,
-                        member_name VARCHAR(16) NOT NULL,
-                        role VARCHAR(16) NOT NULL DEFAULT 'MEMBER',
-                        joined_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                        PRIMARY KEY (member_uuid),
-                        KEY idx_members_clan (clan_id)
-                    ) ENGINE=InnoDB DEFAULT CHARSET=%s COLLATE=%s
-                """.formatted(CHARSET, COLLATE));
+                            CREATE TABLE IF NOT EXISTS clan_members (
+                                clan_id BIGINT NOT NULL,
+                                member_uuid CHAR(36) NOT NULL,
+                                member_name VARCHAR(16) NOT NULL,
+                                role VARCHAR(16) NOT NULL DEFAULT 'MEMBER',
+                                joined_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                                PRIMARY KEY (member_uuid),
+                                KEY idx_members_clan (clan_id)
+                            ) ENGINE=InnoDB DEFAULT CHARSET=%s COLLATE=%s
+                        """.formatted(CHARSET, COLLATE));
 
                 st.execute("""
-                    CREATE TABLE IF NOT EXISTS clan_invites (
-                        id BIGINT AUTO_INCREMENT PRIMARY KEY,
-                        clan_id BIGINT NOT NULL,
-                        target_uuid CHAR(36) NOT NULL,
-                        inviter_uuid CHAR(36) NOT NULL,
-                        requires_approval TINYINT(1) NOT NULL DEFAULT 0,
-                        pending_approval TINYINT(1) NOT NULL DEFAULT 0,
-                        created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                        expires_at TIMESTAMP NOT NULL,
-                        KEY idx_inv_target (target_uuid),
-                        KEY idx_inv_clan (clan_id)
-                    ) ENGINE=InnoDB DEFAULT CHARSET=%s COLLATE=%s
-                """.formatted(CHARSET, COLLATE));
+                            CREATE TABLE IF NOT EXISTS clan_invites (
+                                id BIGINT AUTO_INCREMENT PRIMARY KEY,
+                                clan_id BIGINT NOT NULL,
+                                target_uuid CHAR(36) NOT NULL,
+                                inviter_uuid CHAR(36) NOT NULL,
+                                requires_approval TINYINT(1) NOT NULL DEFAULT 0,
+                                pending_approval TINYINT(1) NOT NULL DEFAULT 0,
+                                created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                                expires_at TIMESTAMP NOT NULL,
+                                KEY idx_inv_target (target_uuid),
+                                KEY idx_inv_clan (clan_id)
+                            ) ENGINE=InnoDB DEFAULT CHARSET=%s COLLATE=%s
+                        """.formatted(CHARSET, COLLATE));
 
                 st.execute("""
-                    CREATE TABLE IF NOT EXISTS clan_settings (
-                        clan_id BIGINT NOT NULL PRIMARY KEY,
-                        open_invites TINYINT(1) NOT NULL DEFAULT 1,
-                        motd VARCHAR(64) NOT NULL DEFAULT ''
-                    ) ENGINE=InnoDB DEFAULT CHARSET=%s COLLATE=%s
-                """.formatted(CHARSET, COLLATE));
+                            CREATE TABLE IF NOT EXISTS clan_settings (
+                                clan_id BIGINT NOT NULL PRIMARY KEY,
+                                open_invites TINYINT(1) NOT NULL DEFAULT 1,
+                                motd VARCHAR(64) NOT NULL DEFAULT '',
+                                tax_rate DOUBLE NOT NULL DEFAULT 0.0
+                            ) ENGINE=InnoDB DEFAULT CHARSET=%s COLLATE=%s
+                        """.formatted(CHARSET, COLLATE));
 
                 st.execute("""
-                    CREATE TABLE IF NOT EXISTS clan_cosmetics (
-                        clan_id BIGINT NOT NULL PRIMARY KEY,
-                        tag_style VARCHAR(64) NOT NULL DEFAULT '',
-                        chat_suffix VARCHAR(64) NOT NULL DEFAULT ''
-                    ) ENGINE=InnoDB DEFAULT CHARSET=%s COLLATE=%s
-                """.formatted(CHARSET, COLLATE));
+                            CREATE TABLE IF NOT EXISTS clan_cosmetics (
+                                clan_id BIGINT NOT NULL PRIMARY KEY,
+                                tag_style VARCHAR(64) NOT NULL DEFAULT '',
+                                chat_suffix VARCHAR(64) NOT NULL DEFAULT ''
+                            ) ENGINE=InnoDB DEFAULT CHARSET=%s COLLATE=%s
+                        """.formatted(CHARSET, COLLATE));
             }
         }
 
@@ -82,6 +90,8 @@ public final class SQL {
         requireColumn(ds, "clans", "id");
         requireColumn(ds, "clans", "name");
         requireColumn(ds, "clans", "tag");
+        requireColumn(ds, "clans", "balance");
+        requireColumn(ds, "clans", "home_world");
         requireColumn(ds, "clans", "created_by");
 
         requireColumn(ds, "clan_members", "member_uuid");
@@ -96,6 +106,7 @@ public final class SQL {
         requireColumn(ds, "clan_settings", "clan_id");
         requireColumn(ds, "clan_settings", "open_invites");
         requireColumn(ds, "clan_settings", "motd");
+        requireColumn(ds, "clan_settings", "tax_rate");
 
         requireColumn(ds, "clan_cosmetics", "clan_id");
         requireColumn(ds, "clan_cosmetics", "tag_style");
@@ -105,6 +116,13 @@ public final class SQL {
     private static void ensureUpToDate(DataSource ds) throws Exception {
         try (Connection con = ds.getConnection()) {
             ensureColumn(con, "clans", "created_at", "TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP");
+            ensureColumn(con, "clans", "balance", "DOUBLE NOT NULL DEFAULT 0.0");
+            ensureColumn(con, "clans", "home_world", "VARCHAR(64) DEFAULT NULL");
+            ensureColumn(con, "clans", "home_x", "DOUBLE DEFAULT 0");
+            ensureColumn(con, "clans", "home_y", "DOUBLE DEFAULT 0");
+            ensureColumn(con, "clans", "home_z", "DOUBLE DEFAULT 0");
+            ensureColumn(con, "clans", "home_yaw", "FLOAT DEFAULT 0");
+            ensureColumn(con, "clans", "home_pitch", "FLOAT DEFAULT 0");
             ensureUniqueIndex(con, "clans", "uk_clans_name", "name");
             ensureUniqueIndex(con, "clans", "uk_clans_tag", "tag");
 
@@ -120,6 +138,7 @@ public final class SQL {
 
             ensureColumn(con, "clan_settings", "open_invites", "TINYINT(1) NOT NULL DEFAULT 1");
             ensureColumn(con, "clan_settings", "motd", "VARCHAR(64) NOT NULL DEFAULT ''");
+            ensureColumn(con, "clan_settings", "tax_rate", "DOUBLE NOT NULL DEFAULT 0.0");
 
             ensureColumn(con, "clan_cosmetics", "tag_style", "VARCHAR(64) NOT NULL DEFAULT ''");
             ensureColumn(con, "clan_cosmetics", "chat_suffix", "VARCHAR(64) NOT NULL DEFAULT ''");
@@ -181,9 +200,9 @@ public final class SQL {
 
     private static boolean hasIndex(Connection con, String table, String indexName) throws Exception {
         try (PreparedStatement ps = con.prepareStatement("""
-            SELECT COUNT(*) FROM information_schema.STATISTICS
-            WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? AND INDEX_NAME = ?
-        """)) {
+                    SELECT COUNT(*) FROM information_schema.STATISTICS
+                    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? AND INDEX_NAME = ?
+                """)) {
             ps.setString(1, table);
             ps.setString(2, indexName);
             try (ResultSet rs = ps.executeQuery()) {
@@ -194,9 +213,9 @@ public final class SQL {
 
     private static boolean hasColumn(Connection con, String table, String col) throws Exception {
         try (PreparedStatement ps = con.prepareStatement("""
-            SELECT COUNT(*) FROM information_schema.COLUMNS
-            WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? AND COLUMN_NAME = ?
-        """)) {
+                    SELECT COUNT(*) FROM information_schema.COLUMNS
+                    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? AND COLUMN_NAME = ?
+                """)) {
             ps.setString(1, table);
             ps.setString(2, col);
             try (ResultSet rs = ps.executeQuery()) {

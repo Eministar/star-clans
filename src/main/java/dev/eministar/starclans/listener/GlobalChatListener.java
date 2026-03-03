@@ -5,6 +5,7 @@ import dev.eministar.starclans.database.ClanRepository;
 import dev.eministar.starclans.model.ClanProfile;
 import dev.eministar.starclans.model.MemberRole;
 import dev.eministar.starclans.service.ClanService;
+import dev.eministar.starclans.utils.LoggerUtil;
 import net.md_5.bungee.api.chat.BaseComponent;
 import net.md_5.bungee.api.chat.ClickEvent;
 import net.md_5.bungee.api.chat.ComponentBuilder;
@@ -71,7 +72,7 @@ public final class GlobalChatListener implements Listener {
                         }
                     });
                 } catch (Exception ex) {
-                    ex.printStackTrace();
+                    LoggerUtil.error("Fehler im Clan-Chat Listener!", ex);
                 }
             });
             return;
@@ -95,7 +96,7 @@ public final class GlobalChatListener implements Listener {
                         "suffix", suffix);
                 Bukkit.getScheduler().runTask(plugin, () -> e.setFormat(format));
             } catch (Exception ex) {
-                ex.printStackTrace();
+                LoggerUtil.error("Fehler beim Setzen des Chat-Formats!", ex);
             }
         });
     }

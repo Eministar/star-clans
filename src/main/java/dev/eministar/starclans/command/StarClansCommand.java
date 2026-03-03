@@ -4,10 +4,13 @@ import dev.eministar.starclans.StarClans;
 import dev.eministar.starclans.database.HikariProvider;
 import dev.eministar.starclans.database.SQL;
 import dev.eministar.starclans.service.ClanService;
+import dev.eministar.starclans.utils.LoggerUtil;
 import dev.eministar.starclans.vault.VaultHook;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
+
+import java.util.List;
 
 public final class StarClansCommand implements CommandExecutor {
 
@@ -21,40 +24,63 @@ public final class StarClansCommand implements CommandExecutor {
 
     @Override
     public boolean onCommand(CommandSender sender, Command cmd, String label, String[] args) {
-        if (args.length == 0) {
-            sender.sendMessage(plugin.lang().prefixed("messages.use.starclans_reload"));
+        if (args.length == 0 || args[0].equalsIgnoreCase("help")) {
+            sendHelp(sender);
             return true;
         }
 
-        if (!args[0].equalsIgnoreCase("reload")) {
-            sender.sendMessage(plugin.lang().prefixed("messages.use.starclans_reload"));
-            return true;
-        }
-
-        if (!sender.hasPermission("starclans.admin.reload")) {
-            sender.sendMessage(plugin.lang().prefixed("messages.no_permission"));
-            return true;
-        }
-
-        plugin.reloadConfig();
-        plugin.lang().reload();
-        VaultHook.init(plugin);
-
-        HikariProvider.shutdown();
-        HikariProvider.init(plugin);
-
-        if (HikariProvider.isReady()) {
-            try {
-                SQL.initSchema(HikariProvider.get());
-            } catch (Exception e) {
-                sender.sendMessage(plugin.lang().prefixed("messages.db_schema_failed"));
-                e.printStackTrace();
+        if (args[0].equalsIgnoreCase("reload")) {
+            if (!sender.hasPermission("starclans.admin.reload")) {
+                sender.sendMessage(plugin.lang().prefixed("messages.no_permission"));
                 return true;
             }
+
+            plugin.reloadConfig();
+            plugin.lang().reload();
+            VaultHook.init(plugin);
+
+            HikariProvider.shutdown();
+            HikariProvider.init(plugin);
+
+            if (HikariProvider.isReady()) {
+                try {
+                    SQL.initSchema(HikariProvider.get());
+                } catch (Exception e) {
+                    sender.sendMessage(plugin.lang().error("messages.db_schema_failed"));
+                    LoggerUtil.error("Fehler beim Initialisieren des Datenbankschemas (Reload)!", e);
+                    return true;
+                }
+            }
+
+            service.clearCache();
+            sender.sendMessage(plugin.lang().success("messages.reload_done"));
+            return true;
         }
 
-        service.clearCache();
-        sender.sendMessage(plugin.lang().prefixed("messages.reload_done"));
+        if (args[0].equalsIgnoreCase("version")) {
+            sender.sendMessage(plugin.lang().prefix() + "§7Version: §b" + plugin.getDescription().getVersion());
+            sender.sendMessage(plugin.lang().prefix() + "§7Author: §fEministar");
+            return true;
+        }
+
+        sendHelp(sender);
         return true;
+    }
+
+    private void sendHelp(CommandSender sender) {
+        List<String> help = plugin.lang().getList("messages.starclans.help.lines");
+        if (help.isEmpty()) {
+            // Fallback if not in lang.yml yet
+            sender.sendMessage("§8§m----------------------------------------");
+            sender.sendMessage("§f/starclans reload §7- Lädt das Plugin neu");
+            sender.sendMessage("§f/starclans version §7- Zeigt die Version an");
+            sender.sendMessage("§8§m----------------------------------------");
+            return;
+        }
+
+        sender.sendMessage(plugin.lang().get("messages.starclans.help.title"));
+        for (String line : help) {
+            sender.sendMessage(line);
+        }
     }
 }

@@ -56,20 +56,30 @@ public final class StarClansExpansion extends PlaceholderExpansion {
             case "name" -> p != null && p.inClan ? p.clanName : clanNameFallback(player.getUniqueId());
             case "name_formatted" -> {
                 if (p != null && p.inClan) {
-                    yield plugin.lang().get("placeholders.name_formatted", "name", p.clanName, "members", p.memberCount);
+                    yield plugin.lang().get("placeholders.name_formatted", "name", p.clanName, "members", String.valueOf(p.memberCount));
                 }
                 long clanId = clanIdFallback(player.getUniqueId());
                 if (clanId <= 0) yield plugin.lang().get("placeholders.none");
                 String name = clanNameFallback(player.getUniqueId());
                 if (name.isEmpty()) yield plugin.lang().get("placeholders.none");
                 int members = memberCountFallback(clanId);
-                yield plugin.lang().get("placeholders.name_formatted", "name", name, "members", members);
+                yield plugin.lang().get("placeholders.name_formatted", "name", name, "members", String.valueOf(members));
             }
             case "tag" -> p != null && p.inClan ? p.clanTag : clanTagFallback(player.getUniqueId());
             case "role" -> p != null && p.inClan ? prettyRole(p.role.name()) : "";
             case "members" -> p != null && p.inClan ? String.valueOf(p.memberCount) : "0";
             case "invites" -> p != null ? String.valueOf(p.inviteCount) : "0";
-            case "in_clan" -> p != null ? (p.inClan ? "true" : "false") : (clanIdFallback(player.getUniqueId()) > 0 ? "true" : "false");
+            case "in_clan" ->
+                    p != null ? (p.inClan ? "true" : "false") : (clanIdFallback(player.getUniqueId()) > 0 ? "true" : "false");
+            case "balance" -> p != null && p.inClan ? String.valueOf(p.balance) : "0";
+            case "balance_formatted" -> {
+                if (p != null && p.inClan) {
+                    yield dev.eministar.starclans.vault.VaultHook.hasEconomy() ? dev.eministar.starclans.vault.VaultHook.eco().format(p.balance) : String.valueOf(p.balance);
+                }
+                yield dev.eministar.starclans.vault.VaultHook.hasEconomy() ? dev.eministar.starclans.vault.VaultHook.eco().format(0) : "0";
+            }
+            case "tax" -> p != null && p.inClan ? String.valueOf(p.taxRate) : "0";
+            case "tax_formatted" -> p != null && p.inClan ? p.taxRate + "%" : "0%";
             case "suffix" -> {
                 if (p != null && p.inClan) {
                     yield clanSuffix(p.clanId, p.clanTag);

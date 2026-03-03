@@ -53,7 +53,8 @@ public final class Lang {
 
     public String get(String path, Object... pairs) {
         ensureLatest();
-        String raw = cfg.getString(path, "");
+        String raw = cfg.getString(path);
+        if (raw == null || raw.isEmpty()) return "";
         return color(apply(raw, pairs));
     }
 
@@ -78,8 +79,25 @@ public final class Lang {
     public String prefixed(String path, Object... pairs) {
         ensureLatest();
         String msg = get(path, pairs);
+        if (msg.isEmpty()) return "";
         String p = prefix();
         return p + msg;
+    }
+
+    public String success(String path, Object... pairs) {
+        return prefix() + "§a" + get(path, pairs);
+    }
+
+    public String error(String path, Object... pairs) {
+        return prefix() + "§c" + get(path, pairs);
+    }
+
+    public String info(String path, Object... pairs) {
+        return prefix() + "§7" + get(path, pairs);
+    }
+
+    public String warning(String path, Object... pairs) {
+        return prefix() + "§e" + get(path, pairs);
     }
 
     public String prefixedRaw(String message) {

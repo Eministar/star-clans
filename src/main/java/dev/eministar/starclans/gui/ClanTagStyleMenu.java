@@ -5,6 +5,7 @@ import dev.eministar.starclans.database.ClanRepository;
 import dev.eministar.starclans.model.ClanProfile;
 import dev.eministar.starclans.model.MemberRole;
 import dev.eministar.starclans.service.ClanService;
+import dev.eministar.starclans.utils.LoggerUtil;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
@@ -62,7 +63,7 @@ public final class ClanTagStyleMenu implements Listener {
 
     private final List<ColorPick> colors;
 
-    private final int[] colorSlots = {10,11,12,13,14,15,16,19,20,21,23,25,28,29,30,31};
+    private final int[] colorSlots = {10, 11, 12, 13, 14, 15, 16, 19, 20, 21, 23, 25, 28, 29, 30, 31};
 
     public ClanTagStyleMenu(StarClans plugin, ClanService service, ClanRepository repo) {
         this.plugin = plugin;
@@ -110,7 +111,10 @@ public final class ClanTagStyleMenu implements Listener {
         Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
             try {
                 MemberRole r = repo.getRole(p.getUniqueId());
-                if (r == MemberRole.MEMBER) {
+                String minRoleStr = plugin.getConfig().getString("clan.tag.minRoleChange", "OFFICER");
+                MemberRole minRole = MemberRole.valueOf(minRoleStr.toUpperCase());
+
+                if (!r.isAtLeast(minRole)) {
                     sync(() -> p.sendMessage(plugin.lang().prefixed("messages.no_rights")));
                     return;
                 }
@@ -121,8 +125,8 @@ public final class ClanTagStyleMenu implements Listener {
                     openInvClan(p, prof, edit);
                 });
             } catch (Exception e) {
-                sync(() -> p.sendMessage(plugin.lang().prefixed("messages.error_console")));
-                e.printStackTrace();
+                sync(() -> p.sendMessage(plugin.lang().error("messages.error_console")));
+                LoggerUtil.error("Fehler im ClanTagStyleMenu für " + p.getName(), e);
             }
         });
     }

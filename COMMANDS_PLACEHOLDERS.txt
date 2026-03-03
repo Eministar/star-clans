@@ -1,94 +1,165 @@
-StarClans - Commands & Placeholders
-==================================
+StarClans - Commands & Placeholders (v1.1.0)
+========================================
 
 Commands (from plugin.yml / command classes)
 --------------------------------------------
 /clan
-  - Opens the main clan menu
+  - Öffnet das Hauptmenü des Clans
   - Aliases: /clans
 
 /clan create
-  - Opens the clan creation menu
+  - Öffnet das Menü zur Clanerstellung
 
 /clan invites
-  - Opens invites/requests menu
+  - Öffnet das Menü für Einladungen und Beitrittsanfragen
 
 /clan invite <player>
-  - Invites a player to your clan
+  - Lädt einen Spieler in den Clan ein
+
+/clan join <clan>
+  - Sendet eine Beitrittsanfrage an einen Clan
 
 /clan accept <id>
-  - Accepts an invite/request by ID
+  - Nimmt eine Einladung/Anfrage über die ID an
 
 /clan deny <id>
-  - Denies an invite/request by ID
+  - Lehnt eine Einladung/Anfrage über die ID ab
 
 /clan members
-  - Opens the members list
+  - Öffnet die Mitgliederliste
 
 /clan members <player>
-  - Opens manage menu for that member
+  - Öffnet das Verwaltungsmenü für ein bestimmtes Mitglied
 
 /clan manage
-  - Opens clan manage GUI (leader only)
-
-/clan settings
-  - Opens settings menu
+  - Öffnet das Clan-Verwaltungsmenü (nur für Anführer)
+  - Aliases: /clan settings
 
 /clan tagstyler
-  - Opens tag/suffix style menu
+  - Öffnet das Menü zum Anpassen des Clan-Tags/Suffixes
   - Aliases: /clan tagstyle, /clan styler
 
 /clan chat
-  - Toggles clan chat
+  - Schaltet den Clan-Chat um
+
+/clan bank
+  - Öffnet das Bank-Menü des Clans
+
+/clan deposit <betrag>
+  - Zahlt Geld in die Clan-Bank ein
+
+/clan withdraw <betrag>
+  - Hebt Geld von der Clan-Bank ab
+
+/clan tax <prozentsatz>
+  - Legt den Steuersatz für den Clan fest (z.B. 5.0 für 5%)
+
+/clan home
+  - Teleportiert dich zum Clan-Home-Punkt
+
+/clan sethome
+  - Setzt den Clan-Home-Punkt an deiner aktuellen Position
+
+/clan top
+  - Zeigt die Bestenliste der Clans an
+  - Aliases: /clan leaderboard
 
 /clan kick <player>
-  - Kicks a member
+  - Wirft ein Mitglied aus dem Clan
 
 /clan promote <player>
-  - Promotes a member
+  - Befördert ein Mitglied
 
 /clan demote <player>
-  - Demotes a member
+  - Degradiert ein Mitglied
+
+/clan transfer <player>
+  - Überträgt die Clan-Leitung auf ein anderes Mitglied
 
 /clan leave
-  - Leaves your clan
+  - Verlässt den aktuellen Clan
 
 /clan disband
-  - Disbands the clan (leader only)
+  - Löst den Clan auf (nur für Anführer)
 
 /starclans reload
-  - Reloads config, Vault, and DB schema
+  - Lädt Konfiguration, Vault und DB-Schema neu
   - Permission: starclans.admin.reload
   - Aliases: /sc
+
+/starclans version
+  - Zeigt die aktuelle Plugin-Version an
+
+/starclans help
+  - Zeigt die Administrator-Hilfe an
+
 
 Placeholders (PlaceholderAPI)
 -----------------------------
 Identifier: starclans
-Author: Emin
 
 %starclans_name%
-  - Clan name (empty if none)
+  - Clan-Name (leer, wenn kein Clan)
 
 %starclans_name_formatted%
-  - Formatted clan name with member count, e.g. "ClanName (5)"; "(-)" if none
+  - Formatierter Clan-Name mit Mitgliederanzahl, z.B. "ClanName (5)"
 
 %starclans_tag%
-  - Clan tag (empty if none)
+  - Clan-Tag ohne Farbe/Style
 
 %starclans_role%
-  - Member role: Leader / Officer / Member (empty if not in clan)
+  - Rolle des Mitglieds: Anführer / Officer / Mitglied
 
 %starclans_members%
-  - Member count ("0" if not in clan)
+  - Anzahl der Clan-Mitglieder
 
 %starclans_invites%
-  - Invite count for player ("0" if not cached)
+  - Anzahl der offenen Einladungen für den Spieler
 
 %starclans_in_clan%
-  - "true" or "false"
+  - "true" oder "false"
+
+%starclans_balance%
+  - Guthaben der Clan-Bank (Zahl)
+
+%starclans_balance_formatted%
+  - Formatiertes Guthaben der Clan-Bank (z.B. "$1,000.00")
+
+%starclans_tax%
+  - Aktueller Steuersatz des Clans (Zahl)
+
+%starclans_tax_formatted%
+  - Formatierter Steuersatz (z.B. "5,0%")
 
 %starclans_suffix%
-  - Suffix like "[TAG]" with style (empty if none)
+  - Clan-Suffix inklusive Style, z.B. "§b[TAG]§r"
 
 %starclans_formatted_suffix%
-  - Same as suffix, but prefixed with a space if not empty
+  - Wie %starclans_suffix%, aber mit führendem Leerzeichen, falls nicht leer
+
+
+Features (Neu in v1.1.0)
+------------------------
+1. Clan-Ökonomie (Vault-Integration)
+   - Gemeinsames Bankkonto für jeden Clan.
+   - Ein- und Auszahlungen für autorisierte Rollen.
+   - Automatisches Steuersystem: Ein konfigurierbarer Prozentsatz der Einnahmen
+     fließt direkt in die Clan-Bank.
+
+2. Clan-Infrastruktur
+   - Home-System: Clans können einen gemeinsamen Teleportpunkt setzen.
+   - Kosten und Berechtigungen für /clan home sind in der config.yml einstellbar.
+
+3. Leaderboards
+   - Ein grafisches Interface (/clan top), um die stärksten Clans basierend auf
+     Bankguthaben oder Mitgliederanzahl zu vergleichen.
+
+4. Erweitertes Rollensystem (RBAC)
+   - Feingranulare Berechtigungen: Bestimme in der config.yml, ab welchem Rang
+     Mitglieder den Home-Punkt setzen, sich teleportieren oder den Clan-Tag
+     ändern dürfen.
+
+5. Professionelles Design & Logging
+   - Alle Nachrichten und GUIs folgen einem einheitlichen "Star"-Design.
+   - Fehlerfreies Encoding für Umlaute und Sonderzeichen.
+   - Automatisches Logging von Fehlern in den /logs Ordner zur besseren Wartbarkeit.

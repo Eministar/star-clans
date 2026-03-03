@@ -4,6 +4,7 @@ import dev.eministar.starclans.StarClans;
 import dev.eministar.starclans.database.ClanRepository;
 import dev.eministar.starclans.model.MemberRole;
 import dev.eministar.starclans.service.ClanService;
+import dev.eministar.starclans.utils.LoggerUtil;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.Sound;
@@ -73,8 +74,8 @@ public final class ClanMemberManageMenu implements Listener {
 
                 Bukkit.getScheduler().runTask(plugin, () -> openInv(viewer, targetUuid, vRole, tRole));
             } catch (Exception e) {
-                Bukkit.getScheduler().runTask(plugin, () -> viewer.sendMessage(plugin.lang().prefixed("messages.error_console")));
-                e.printStackTrace();
+                Bukkit.getScheduler().runTask(plugin, () -> viewer.sendMessage(plugin.lang().error("messages.error_console")));
+                LoggerUtil.error("Fehler im ClanMemberManageMenu für " + viewer.getName(), e);
             }
         });
     }

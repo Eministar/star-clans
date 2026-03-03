@@ -1,6 +1,7 @@
 package dev.eministar.starclans.utils;
 
 import net.md_5.bungee.api.ChatColor;
+import dev.eministar.starclans.utils.LoggerUtil;
 import net.md_5.bungee.api.chat.ClickEvent;
 import net.md_5.bungee.api.chat.ComponentBuilder;
 import net.md_5.bungee.api.chat.HoverEvent;
@@ -53,6 +54,8 @@ public final class UpdateChecker {
             currentVersion = current;
             updateAvailable = true;
 
+            LoggerUtil.info("Eine neue Version von StarClans ist verfügbar: " + latest + " (Aktuell: " + current + ")");
+
             Bukkit.getScheduler().runTask(plugin, () -> {
                 for (Player player : Bukkit.getOnlinePlayers()) {
                     if (!player.isOp()) {
@@ -94,7 +97,7 @@ public final class UpdateChecker {
 
         TextComponent download = new TextComponent(lang != null ? lang.get("messages.update.download") : "⤓ Download");
         download.setColor(ChatColor.AQUA);
-        download.setBold(true);
+        download.setBold(Boolean.TRUE);
         download.setClickEvent(new ClickEvent(ClickEvent.Action.OPEN_URL, PLUGIN_URL));
         download.setHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT,
                 new ComponentBuilder(lang != null ? lang.get("messages.update.download_hover") : "Öffnet die Download-Seite").color(ChatColor.GRAY).create()));
@@ -103,7 +106,7 @@ public final class UpdateChecker {
 
         TextComponent copy = new TextComponent(lang != null ? lang.get("messages.update.copy") : "⎘ Version kopieren");
         copy.setColor(ChatColor.GOLD);
-        copy.setBold(true);
+        copy.setBold(Boolean.TRUE);
         copy.setClickEvent(new ClickEvent(ClickEvent.Action.COPY_TO_CLIPBOARD, latest));
         copy.setHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT,
                 new ComponentBuilder(lang != null ? lang.get("messages.update.copy_hover") : "Kopiert die neue Version").color(ChatColor.GRAY).create()));

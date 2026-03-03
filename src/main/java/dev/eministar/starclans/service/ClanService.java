@@ -4,14 +4,18 @@ import dev.eministar.starclans.StarClans;
 import dev.eministar.starclans.database.ClanRepository;
 import dev.eministar.starclans.model.ClanProfile;
 import dev.eministar.starclans.model.MemberRole;
+import dev.eministar.starclans.utils.LoggerUtil;
 import dev.eministar.starclans.vault.VaultHook;
 import net.md_5.bungee.api.chat.ClickEvent;
 import net.md_5.bungee.api.chat.ComponentBuilder;
 import net.md_5.bungee.api.chat.TextComponent;
 import org.bukkit.Bukkit;
+import org.bukkit.Location;
 import org.bukkit.Sound;
+import org.bukkit.World;
 import org.bukkit.entity.Player;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -35,6 +39,8 @@ public final class ClanService {
 
     private final Map<UUID, ClanProfile> cache = new ConcurrentHashMap<>();
     private final Map<UUID, Boolean> clanChat = new ConcurrentHashMap<>();
+    private final Map<UUID, Long> inviteCooldownUntil = new ConcurrentHashMap<>();
+    private final Map<UUID, Long> joinCooldownUntil = new ConcurrentHashMap<>();
 
     private final Pattern allowed = Pattern.compile("^[A-Za-z0-9_]+$");
 
@@ -45,6 +51,8 @@ public final class ClanService {
 
     public void clearCache() {
         cache.clear();
+        inviteCooldownUntil.clear();
+        joinCooldownUntil.clear();
     }
 
     public void invalidate(UUID uuid) {
@@ -62,33 +70,19 @@ public final class ClanService {
 
     public boolean toggleClanChat(UUID uuid) {
         boolean next = !isClanChat(uuid);
-        clanChat.put(uuid, next);
+        clanChat.put(uuid, Boolean.valueOf(next));
         return next;
     }
 
     public void loadProfileAsync(UUID uuid, Consumer<ClanProfile> cb) {
         Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
             try {
-                int invites = repo.countInvites(uuid);
-                long clanId = repo.getClanIdByMember(uuid);
-
-                if (clanId <= 0) {
-                    ClanProfile p = ClanProfile.none(invites);
-                    cache.put(uuid, p);
-                    syncProfile(cb, p);
-                    return;
-                }
-
-                String[] nt = repo.getClanNameTag(clanId);
-                MemberRole role = repo.getRole(uuid);
-                int members = repo.countMembers(clanId);
-
-                ClanProfile p = new ClanProfile(true, clanId, nt[0], nt[1], role, members, invites);
+                ClanProfile p = repo.getFullProfile(uuid);
                 cache.put(uuid, p);
                 syncProfile(cb, p);
             } catch (Exception e) {
                 syncProfile(cb, ClanProfile.none(0));
-                e.printStackTrace();
+                LoggerUtil.error("Fehler beim Laden des Spielerprofils!", e);
             }
         });
     }
@@ -108,11 +102,11 @@ public final class ClanService {
         int maxT = plugin.getConfig().getInt("clan.creation.maxTagLen", 5);
 
         if (n.length() < minN || n.length() > maxN) {
-            doneMsg.accept(plugin.lang().get("messages.create.name_len", "min", minN, "max", maxN));
+            doneMsg.accept(plugin.lang().get("messages.create.name_len", "min", Integer.valueOf(minN), "max", Integer.valueOf(maxN)));
             return;
         }
         if (t.length() < minT || t.length() > maxT) {
-            doneMsg.accept(plugin.lang().get("messages.create.tag_len", "min", minT, "max", maxT));
+            doneMsg.accept(plugin.lang().get("messages.create.tag_len", "min", Integer.valueOf(minT), "max", Integer.valueOf(maxT)));
             return;
         }
         if (!allowed.matcher(n).matches() || !allowed.matcher(t).matches()) {
@@ -165,7 +159,7 @@ public final class ClanService {
                 });
             } catch (Exception e) {
                 syncMsg(doneMsg, plugin.lang().get("messages.create.fail"));
-                e.printStackTrace();
+                LoggerUtil.error("Fehler bei der Clan-Erstellung für " + player.getName(), e);
             }
         });
     }
@@ -173,6 +167,13 @@ public final class ClanService {
     public void invite(Player inviter, Player target, Consumer<String> msg) {
         Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
             try {
+                long inviteCooldown = Math.max(0, plugin.getConfig().getLong("clan.invite.cooldownSeconds", 20));
+                long wait = cooldownLeft(inviteCooldownUntil, inviter.getUniqueId());
+                if (wait > 0) {
+                    syncMsg(msg, plugin.lang().get("messages.invite.cooldown", "seconds", Long.valueOf(wait)));
+                    return;
+                }
+
                 long clanId = repo.getClanIdByMember(inviter.getUniqueId());
                 if (clanId <= 0) {
                     syncMsg(msg, plugin.lang().get("messages.not_in_clan"));
@@ -186,9 +187,17 @@ public final class ClanService {
                     return;
                 }
 
+                if (repo.hasActiveInviteForTargetClan(target.getUniqueId(), clanId)) {
+                    syncMsg(msg, plugin.lang().get("messages.invite.already_pending", "player", target.getName()));
+                    return;
+                }
+
                 int minutes = plugin.getConfig().getInt("clan.invite.expireMinutes", 60);
                 boolean requiresApproval = r == MemberRole.MEMBER;
                 long inviteId = repo.createInvite(clanId, target.getUniqueId(), inviter.getUniqueId(), minutes, requiresApproval);
+                if (inviteId > 0 && inviteCooldown > 0) {
+                    setCooldown(inviteCooldownUntil, inviter.getUniqueId(), inviteCooldown);
+                }
 
                 sync(() -> {
                     inviter.playSound(inviter.getLocation(), Sound.UI_BUTTON_CLICK, 0.8f, 1.4f);
@@ -213,7 +222,69 @@ public final class ClanService {
                 });
             } catch (Exception e) {
                 syncMsg(msg, plugin.lang().get("messages.invite.fail"));
-                e.printStackTrace();
+                LoggerUtil.error("Fehler beim Senden einer Einladung von " + inviter.getName(), e);
+            }
+        });
+    }
+
+    public void requestJoin(Player player, String clanInput, Consumer<String> msg) {
+        Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
+            try {
+                if (repo.getClanIdByMember(player.getUniqueId()) > 0) {
+                    syncMsg(msg, plugin.lang().get("messages.already_in_clan"));
+                    return;
+                }
+
+                long requestCooldown = Math.max(0, plugin.getConfig().getLong("clan.joinRequest.cooldownSeconds", 20));
+                long wait = cooldownLeft(joinCooldownUntil, player.getUniqueId());
+                if (wait > 0) {
+                    syncMsg(msg, plugin.lang().get("messages.join.cooldown", "seconds", Long.valueOf(wait)));
+                    return;
+                }
+
+                ClanRepository.ClanLookupRow clan = repo.findClanByNameOrTag(clanInput);
+                if (clan == null) {
+                    syncMsg(msg, plugin.lang().get("messages.join.clan_not_found"));
+                    return;
+                }
+
+                ClanRepository.ClanSettingsRow settings = repo.getSettings(clan.clanId);
+                if (!settings.openInvite) {
+                    syncMsg(msg, plugin.lang().get("messages.join.open_invite_off"));
+                    return;
+                }
+
+                if (repo.hasActiveInviteForTargetClan(player.getUniqueId(), clan.clanId)) {
+                    syncMsg(msg, plugin.lang().get("messages.join.already_pending"));
+                    return;
+                }
+
+                int minutes = plugin.getConfig().getInt("clan.invite.expireMinutes", 60);
+                long requestId = repo.createJoinRequest(clan.clanId, player.getUniqueId(), minutes);
+                if (requestId <= 0) {
+                    syncMsg(msg, plugin.lang().get("messages.join.fail"));
+                    return;
+                }
+
+                if (requestCooldown > 0) {
+                    setCooldown(joinCooldownUntil, player.getUniqueId(), requestCooldown);
+                }
+
+                ClanRepository.InviteRow inv = repo.getInviteForApproval(requestId, clan.clanId);
+
+                sync(() -> {
+                    player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 0.8f, 1.3f);
+                    msg.accept(plugin.lang().get("messages.join.request_sent",
+                            "clan", clan.clanName,
+                            "tag", clan.clanTag));
+                });
+
+                if (inv != null) {
+                    notifyInviteApproval(inv);
+                }
+            } catch (Exception e) {
+                syncMsg(msg, plugin.lang().get("messages.join.fail"));
+                LoggerUtil.error("Fehler bei der Beitrittsanfrage von " + player.getName(), e);
             }
         });
     }
@@ -250,6 +321,10 @@ public final class ClanService {
                                 "tag", inv.clanTag));
                     });
                     notifyClan(inv.clanId, plugin.lang().get("messages.broadcasts.join", "player", player.getName()), Sound.ENTITY_EXPERIENCE_ORB_PICKUP);
+                    sendWebhook("join",
+                            "Clan Join",
+                            player.getName() + " joined " + inv.clanName + " [" + inv.clanTag + "].",
+                            0x2ECC71);
                     return;
                 }
 
@@ -295,9 +370,14 @@ public final class ClanService {
                 notifyClan(pending.clanId,
                         plugin.lang().get("messages.broadcasts.join", "player", targetName == null ? plugin.lang().get("messages.generic_new_member") : targetName),
                         Sound.ENTITY_EXPERIENCE_ORB_PICKUP);
+                String joinedName = targetName == null ? plugin.lang().get("messages.generic_new_member") : targetName;
+                sendWebhook("join",
+                        "Clan Join",
+                        joinedName + " joined " + pending.clanName + " [" + pending.clanTag + "] after approval.",
+                        0x2ECC71);
             } catch (Exception e) {
                 syncMsg(msg, plugin.lang().get("messages.invite.accept_fail"));
-                e.printStackTrace();
+                LoggerUtil.error("Fehler beim Annehmen einer Einladung durch " + player.getName(), e);
             }
         });
     }
@@ -341,7 +421,7 @@ public final class ClanService {
                 });
             } catch (Exception e) {
                 syncMsg(msg, plugin.lang().get("messages.invite.deny_fail"));
-                e.printStackTrace();
+                LoggerUtil.error("Fehler beim Ablehnen einer Einladung durch " + player.getName(), e);
             }
         });
     }
@@ -369,9 +449,13 @@ public final class ClanService {
                     msg.accept(plugin.lang().get("messages.leave.success"));
                 });
                 notifyClan(clanId, plugin.lang().get("messages.broadcasts.leave", "player", player.getName()), Sound.ENTITY_VILLAGER_NO);
+                sendWebhook("leave",
+                        "Clan Leave",
+                        player.getName() + " left clan " + clanId + ".",
+                        0x95A5A6);
             } catch (Exception e) {
                 syncMsg(msg, plugin.lang().get("messages.leave.fail"));
-                e.printStackTrace();
+                LoggerUtil.error("Fehler beim Verlassen des Clans durch " + player.getName(), e);
             }
         });
     }
@@ -402,7 +486,7 @@ public final class ClanService {
                 notifyMembers(members, plugin.lang().get("messages.broadcasts.disband"), Sound.ENTITY_WITHER_DEATH);
             } catch (Exception e) {
                 syncMsg(msg, plugin.lang().get("messages.disband.fail"));
-                e.printStackTrace();
+                LoggerUtil.error("Fehler beim Auflösen des Clans durch " + player.getName(), e);
             }
         });
     }
@@ -432,7 +516,7 @@ public final class ClanService {
                 notifyClan(clanId, plugin.lang().get("messages.motd.changed_broadcast", "player", actor.getName()), Sound.UI_BUTTON_CLICK);
             } catch (Exception e) {
                 syncMsg(msg, plugin.lang().get("messages.motd.fail"));
-                e.printStackTrace();
+                LoggerUtil.error("Fehler beim Setzen der MOTD durch " + actor.getName(), e);
             }
         });
     }
@@ -461,12 +545,12 @@ public final class ClanService {
                             "status", now ? plugin.lang().get("messages.open_invite.on") : plugin.lang().get("messages.open_invite.off")));
                 });
                 notifyClan(clanId, plugin.lang().get("messages.open_invite.changed_broadcast",
-                        "player", actor.getName(),
-                        "status", now ? plugin.lang().get("messages.open_invite.on") : plugin.lang().get("messages.open_invite.off")),
+                                "player", actor.getName(),
+                                "status", now ? plugin.lang().get("messages.open_invite.on") : plugin.lang().get("messages.open_invite.off")),
                         Sound.UI_BUTTON_CLICK);
             } catch (Exception e) {
                 syncMsg(msg, plugin.lang().get("messages.open_invite.fail"));
-                e.printStackTrace();
+                LoggerUtil.error("Fehler beim Toggeln von Open-Invite durch " + actor.getName(), e);
             }
         });
     }
@@ -492,7 +576,7 @@ public final class ClanService {
                     online.playSound(online.getLocation(), Sound.ENTITY_EXPERIENCE_ORB_PICKUP, 0.35f, 1.8f);
                 }
             } catch (Exception e) {
-                e.printStackTrace();
+                LoggerUtil.error("Fehler beim Verarbeiten des Clan-Chats!", e);
             }
         });
 
@@ -500,7 +584,7 @@ public final class ClanService {
     }
 
     public String money(double v) {
-        return String.format("%,.0f", v).replace(',', '.') + plugin.lang().get("messages.money_suffix");
+        return String.format(Locale.GERMANY, "%,.0f", Double.valueOf(v)).replace(',', '.') + plugin.lang().get("messages.money_suffix");
     }
 
     private CompletableFuture<Boolean> withdrawOnMain(Player player, double cost) {
@@ -508,18 +592,18 @@ public final class ClanService {
         sync(() -> {
             try {
                 if (!VaultHook.hasEconomy()) {
-                    f.complete(false);
+                    f.complete(Boolean.FALSE);
                     return;
                 }
                 double bal = VaultHook.eco().getBalance(player);
                 if (bal < cost) {
-                    f.complete(false);
+                    f.complete(Boolean.FALSE);
                     return;
                 }
                 boolean ok = VaultHook.eco().withdrawPlayer(player, cost).transactionSuccess();
-                f.complete(ok);
+                f.complete(Boolean.valueOf(ok));
             } catch (Exception e) {
-                f.complete(false);
+                f.complete(Boolean.FALSE);
             }
         });
         return f;
@@ -566,12 +650,12 @@ public final class ClanService {
                 });
                 String name = Bukkit.getOfflinePlayer(target).getName();
                 notifyClan(clanId, plugin.lang().get("messages.promote.broadcast",
-                        "player", name == null ? plugin.lang().get("messages.generic_member") : name,
-                        "actor", actor.getName()),
+                                "player", name == null ? plugin.lang().get("messages.generic_member") : name,
+                                "actor", actor.getName()),
                         Sound.UI_BUTTON_CLICK);
             } catch (Exception e) {
                 syncMsg(msg, plugin.lang().get("messages.promote.fail"));
-                e.printStackTrace();
+                LoggerUtil.error("Fehler beim Befördern durch " + actor.getName(), e);
             }
         });
     }
@@ -617,12 +701,73 @@ public final class ClanService {
                 });
                 String name = Bukkit.getOfflinePlayer(target).getName();
                 notifyClan(clanId, plugin.lang().get("messages.demote.broadcast",
-                        "player", name == null ? plugin.lang().get("messages.generic_member") : name,
-                        "actor", actor.getName()),
+                                "player", name == null ? plugin.lang().get("messages.generic_member") : name,
+                                "actor", actor.getName()),
                         Sound.UI_BUTTON_CLICK);
             } catch (Exception e) {
                 syncMsg(msg, plugin.lang().get("messages.demote.fail"));
-                e.printStackTrace();
+                LoggerUtil.error("Fehler beim Degradieren durch " + actor.getName(), e);
+            }
+        });
+    }
+
+    public void transferLeader(Player actor, UUID target, Consumer<String> msg) {
+        Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
+            try {
+                if (actor.getUniqueId().equals(target)) {
+                    syncMsg(msg, plugin.lang().get("messages.transfer.cannot_self"));
+                    return;
+                }
+
+                long clanId = repo.getClanIdByMember(actor.getUniqueId());
+                if (clanId <= 0) {
+                    syncMsg(msg, plugin.lang().get("messages.not_in_clan"));
+                    return;
+                }
+
+                if (repo.getClanIdByMember(target) != clanId) {
+                    syncMsg(msg, plugin.lang().get("messages.not_in_your_clan"));
+                    return;
+                }
+
+                MemberRole actorRole = repo.getRole(actor.getUniqueId());
+                if (actorRole != MemberRole.LEADER) {
+                    syncMsg(msg, plugin.lang().get("messages.transfer.only_leader"));
+                    return;
+                }
+
+                repo.transferLeadership(actor.getUniqueId(), target);
+                invalidate(actor.getUniqueId());
+                invalidate(target);
+
+                String targetName = Bukkit.getOfflinePlayer(target).getName();
+                if (targetName == null || targetName.isBlank()) {
+                    targetName = plugin.lang().get("messages.generic_member");
+                }
+                String finalTargetName = targetName;
+
+                sync(() -> {
+                    actor.playSound(actor.getLocation(), Sound.UI_BUTTON_CLICK, 0.9f, 1.3f);
+                    msg.accept(plugin.lang().get("messages.transfer.success_actor", "player", finalTargetName));
+                    Player t = Bukkit.getPlayer(target);
+                    if (t != null) {
+                        t.sendMessage(plugin.lang().prefixed("messages.transfer.success_target"));
+                        t.playSound(t.getLocation(), Sound.ENTITY_PLAYER_LEVELUP, 0.9f, 1.2f);
+                    }
+                });
+
+                notifyClan(clanId, plugin.lang().get("messages.transfer.broadcast",
+                        "player", finalTargetName,
+                        "actor", actor.getName()), Sound.UI_BUTTON_CLICK);
+
+                sendWebhook("transfer",
+                        "Leader Transfer",
+                        actor.getName() + " transferred leadership to " + finalTargetName +
+                                " in clan " + clanId + ".",
+                        0xF1C40F);
+            } catch (Exception e) {
+                syncMsg(msg, plugin.lang().get("messages.transfer.fail"));
+                LoggerUtil.error("Fehler beim Übertragen der Clan-Leitung durch " + actor.getName(), e);
             }
         });
     }
@@ -679,12 +824,17 @@ public final class ClanService {
                 });
                 String name = Bukkit.getOfflinePlayer(target).getName();
                 notifyClan(clanId, plugin.lang().get("messages.kick.broadcast",
-                        "player", name == null ? plugin.lang().get("messages.generic_member") : name,
-                        "actor", actor.getName()),
+                                "player", name == null ? plugin.lang().get("messages.generic_member") : name,
+                                "actor", actor.getName()),
                         Sound.ENTITY_VILLAGER_NO);
+                String kickedName = name == null ? plugin.lang().get("messages.generic_member") : name;
+                sendWebhook("kick",
+                        "Clan Kick",
+                        actor.getName() + " kicked " + kickedName + " from clan " + clanId + ".",
+                        0xE74C3C);
             } catch (Exception e) {
                 syncMsg(msg, plugin.lang().get("messages.kick.fail"));
-                e.printStackTrace();
+                LoggerUtil.error("Fehler beim Kicken durch " + actor.getName(), e);
             }
         });
     }
@@ -699,7 +849,10 @@ public final class ClanService {
                 }
 
                 MemberRole r = repo.getRole(actor.getUniqueId());
-                if (r == MemberRole.MEMBER) {
+                String minRoleStr = plugin.getConfig().getString("clan.tag.minRoleChange", "OFFICER");
+                MemberRole minRole = MemberRole.valueOf(minRoleStr.toUpperCase());
+
+                if (!r.isAtLeast(minRole)) {
                     syncMsg(msg, plugin.lang().get("messages.no_rights"));
                     return;
                 }
@@ -712,7 +865,7 @@ public final class ClanService {
                 notifyClan(clanId, plugin.lang().get("messages.tag_style.changed_broadcast", "player", actor.getName()), Sound.UI_BUTTON_CLICK);
             } catch (Exception e) {
                 syncMsg(msg, plugin.lang().get("messages.tag_style.fail"));
-                e.printStackTrace();
+                LoggerUtil.error("Fehler beim Setzen des Tag-Styles durch " + actor.getName(), e);
             }
         });
     }
@@ -746,16 +899,253 @@ public final class ClanService {
 
             } catch (Exception e) {
                 syncMsg(msg, plugin.lang().get("messages.chat_suffix.fail"));
-                e.printStackTrace();
+                LoggerUtil.error("Fehler beim Setzen des Chat-Suffix durch " + actor.getName(), e);
+            }
+        });
+    }
+
+    public void deposit(Player player, double amount, Consumer<String> msg) {
+        if (amount <= 0) {
+            msg.accept(plugin.lang().get("messages.bank.invalid_amount"));
+            return;
+        }
+
+        Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
+            try {
+                ClanProfile p = repo.getFullProfile(player.getUniqueId());
+                if (!p.inClan) {
+                    syncMsg(msg, plugin.lang().get("messages.not_in_clan"));
+                    return;
+                }
+
+                boolean ok = withdrawOnMain(player, amount).get(3, TimeUnit.SECONDS);
+                if (!ok) {
+                    syncMsg(msg, plugin.lang().get("messages.bank.not_enough_money", "amount", money(amount)));
+                    return;
+                }
+
+                repo.deposit(p.clanId, amount);
+                invalidate(player.getUniqueId());
+
+                sync(() -> {
+                    player.playSound(player.getLocation(), Sound.ENTITY_PLAYER_LEVELUP, 0.5f, 1.5f);
+                    msg.accept(plugin.lang().get("messages.bank.deposit_success", "amount", money(amount)));
+                });
+
+            } catch (Exception e) {
+                syncMsg(msg, plugin.lang().get("messages.bank.fail"));
+                LoggerUtil.error("Fehler beim Einzahlen von " + amount + " durch " + player.getName(), e);
+            }
+        });
+    }
+
+    public void withdraw(Player player, double amount, Consumer<String> msg) {
+        if (amount <= 0) {
+            msg.accept(plugin.lang().get("messages.bank.invalid_amount"));
+            return;
+        }
+
+        Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
+            try {
+                ClanProfile p = repo.getFullProfile(player.getUniqueId());
+                if (!p.inClan) {
+                    syncMsg(msg, plugin.lang().get("messages.not_in_clan"));
+                    return;
+                }
+
+                if (!p.role.isAtLeast(MemberRole.OFFICER)) {
+                    syncMsg(msg, plugin.lang().get("messages.no_rights"));
+                    return;
+                }
+
+                if (p.balance < amount) {
+                    syncMsg(msg, plugin.lang().get("messages.bank.clan_not_enough_money", "amount", money(amount)));
+                    return;
+                }
+
+                repo.withdraw(p.clanId, amount);
+                invalidate(player.getUniqueId());
+
+                // Give money to player
+                VaultHook.eco().depositPlayer(player, amount);
+
+                sync(() -> {
+                    player.playSound(player.getLocation(), Sound.BLOCK_NOTE_BLOCK_XYLOPHONE, 0.5f, 1.2f);
+                    msg.accept(plugin.lang().get("messages.bank.withdraw_success", "amount", money(amount)));
+                });
+
+            } catch (Exception e) {
+                syncMsg(msg, plugin.lang().get("messages.bank.fail"));
+                LoggerUtil.error("Fehler beim Abheben von " + amount + " durch " + player.getName(), e);
+            }
+        });
+    }
+
+    public void setHome(Player player, Consumer<String> msg) {
+        Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
+            try {
+                ClanProfile p = repo.getFullProfile(player.getUniqueId());
+                if (!p.inClan) {
+                    syncMsg(msg, plugin.lang().get("messages.not_in_clan"));
+                    return;
+                }
+
+                String minRoleStr = plugin.getConfig().getString("clan.home.minRoleSet", "OFFICER");
+                MemberRole minRole = MemberRole.valueOf(minRoleStr.toUpperCase());
+
+                if (!p.role.isAtLeast(minRole)) {
+                    syncMsg(msg, plugin.lang().get("messages.no_rights"));
+                    return;
+                }
+
+                double cost = plugin.getConfig().getDouble("clan.home.setCost", 0.0);
+                if (cost > 0.0) {
+                    boolean ok = withdrawOnMain(player, cost).get(3, TimeUnit.SECONDS);
+                    if (!ok) {
+                        syncMsg(msg, plugin.lang().get("messages.home.set_not_enough_money", "cost", money(cost)));
+                        return;
+                    }
+                }
+
+                Location loc = player.getLocation();
+                repo.setHome(p.clanId, loc.getWorld().getName(), loc.getX(), loc.getY(), loc.getZ(), loc.getYaw(), loc.getPitch());
+                invalidate(player.getUniqueId());
+
+                sync(() -> {
+                    player.playSound(player.getLocation(), Sound.BLOCK_BEACON_ACTIVATE, 0.7f, 1.5f);
+                    msg.accept(plugin.lang().get("messages.home.set_success"));
+                });
+
+            } catch (Exception e) {
+                syncMsg(msg, plugin.lang().get("messages.home.set_fail"));
+                LoggerUtil.error("Fehler beim Setzen des Clan-Homes durch " + player.getName(), e);
+            }
+        });
+    }
+
+    public void teleportHome(Player player, Consumer<String> msg) {
+        Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
+            try {
+                ClanProfile p = repo.getFullProfile(player.getUniqueId());
+                if (!p.inClan) {
+                    syncMsg(msg, plugin.lang().get("messages.not_in_clan"));
+                    return;
+                }
+
+                String minRoleStr = plugin.getConfig().getString("clan.home.minRoleTeleport", "MEMBER");
+                MemberRole minRole = MemberRole.valueOf(minRoleStr.toUpperCase());
+
+                if (!p.role.isAtLeast(minRole)) {
+                    syncMsg(msg, plugin.lang().get("messages.no_rights"));
+                    return;
+                }
+
+                if (p.homeWorld == null || p.homeWorld.isEmpty()) {
+                    syncMsg(msg, plugin.lang().get("messages.home.not_set"));
+                    return;
+                }
+
+                double cost = plugin.getConfig().getDouble("clan.home.teleportCost", 0.0);
+                if (cost > 0.0) {
+                    boolean ok = withdrawOnMain(player, cost).get(3, TimeUnit.SECONDS);
+                    if (!ok) {
+                        syncMsg(msg, plugin.lang().get("messages.home.tp_not_enough_money", "cost", money(cost)));
+                        return;
+                    }
+                }
+
+                sync(() -> {
+                    World world = Bukkit.getWorld(p.homeWorld);
+                    if (world == null) {
+                        msg.accept(plugin.lang().get("messages.home.world_not_found"));
+                        return;
+                    }
+                    Location target = new Location(world, p.homeX, p.homeY, p.homeZ, p.homeYaw, p.homePitch);
+                    player.teleport(target);
+                    player.playSound(player.getLocation(), Sound.ENTITY_ENDERMAN_TELEPORT, 0.7f, 1.0f);
+                    msg.accept(plugin.lang().get("messages.home.tp_success"));
+                });
+
+            } catch (Exception e) {
+                syncMsg(msg, plugin.lang().get("messages.home.tp_fail"));
+                LoggerUtil.error("Fehler beim Teleportieren zum Clan-Home für " + player.getName(), e);
+            }
+        });
+    }
+
+    public void setTaxRate(Player player, double rate, Consumer<String> msg) {
+        if (rate < 0 || rate > 50) { // Max 50% tax for safety
+            msg.accept(plugin.lang().get("messages.tax.invalid_rate"));
+            return;
+        }
+
+        Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
+            try {
+                ClanProfile p = repo.getFullProfile(player.getUniqueId());
+                if (!p.inClan) {
+                    syncMsg(msg, plugin.lang().get("messages.not_in_clan"));
+                    return;
+                }
+
+                if (!p.role.isAtLeast(MemberRole.LEADER)) {
+                    syncMsg(msg, plugin.lang().get("messages.no_rights"));
+                    return;
+                }
+
+                repo.setTaxRate(p.clanId, rate);
+                invalidate(player.getUniqueId());
+
+                sync(() -> {
+                    player.playSound(player.getLocation(), Sound.BLOCK_ANVIL_USE, 0.5f, 1.2f);
+                    msg.accept(plugin.lang().get("messages.tax.set_success", "rate", Double.valueOf(rate)));
+                });
+
+            } catch (Exception e) {
+                syncMsg(msg, plugin.lang().get("messages.tax.fail"));
+                LoggerUtil.error("Fehler beim Setzen des Steuersatzes durch " + player.getName(), e);
+            }
+        });
+    }
+
+    public void getTopClans(boolean byBalance, Consumer<List<ClanRepository.ClanLeaderboardRow>> cb) {
+        Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
+            try {
+                int limit = plugin.getConfig().getInt("leaderboard.limit", 10);
+                List<ClanRepository.ClanLeaderboardRow> top = byBalance
+                        ? repo.getTopClansByBalance(limit)
+                        : repo.getTopClansByMembers(limit);
+                sync(() -> cb.accept(top));
+            } catch (Exception e) {
+                sync(() -> cb.accept(new ArrayList<>()));
+                LoggerUtil.error("Fehler beim Laden der Bestenliste!", e);
             }
         });
     }
 
 
     public static String moneyStatic(double v, String suffix) {
-        return String.format("%,.0f", v).replace(',', '.') + suffix;
+        return String.format(Locale.GERMANY, "%,.0f", Double.valueOf(v)).replace(',', '.') + suffix;
     }
 
+    private long cooldownLeft(Map<UUID, Long> cooldowns, UUID uuid) {
+        Long until = cooldowns.get(uuid);
+        if (until == null) return 0L;
+        long left = (until - System.currentTimeMillis() + 999L) / 1000L;
+        if (left <= 0) {
+            cooldowns.remove(uuid);
+            return 0L;
+        }
+        return left;
+    }
+
+    private void setCooldown(Map<UUID, Long> cooldowns, UUID uuid, long seconds) {
+        cooldowns.put(uuid, Long.valueOf(System.currentTimeMillis() + (seconds * 1000L)));
+    }
+
+    private void sendWebhook(String eventKey, String title, String description, int color) {
+        if (plugin.discord() == null) return;
+        plugin.discord().sendEvent(eventKey, title, description, color);
+    }
 
 
     private void sync(Runnable r) {
@@ -782,7 +1172,7 @@ public final class ClanService {
                         String inviterName = Bukkit.getOfflinePlayer(inv.inviterUuid).getName();
                         t.sendMessage(plugin.lang().prefixed("messages.invite.request_new",
                                 "player", targetName == null ? plugin.lang().get("messages.generic_player") : targetName));
-                        if (inviterName != null) {
+                        if (inviterName != null && !inv.inviterUuid.equals(inv.targetUuid)) {
                             t.sendMessage(plugin.lang().prefixed("messages.invite.request_from", "player", inviterName));
                         }
                         t.sendMessage(plugin.lang().prefixed("messages.invite.request_action"));

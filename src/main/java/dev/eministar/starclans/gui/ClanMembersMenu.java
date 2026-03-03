@@ -5,6 +5,7 @@ import dev.eministar.starclans.database.ClanRepository;
 import dev.eministar.starclans.model.ClanProfile;
 import dev.eministar.starclans.model.MemberRole;
 import dev.eministar.starclans.service.ClanService;
+import dev.eministar.starclans.utils.LoggerUtil;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.Sound;
@@ -53,8 +54,8 @@ public final class ClanMembersMenu implements Listener {
                 p.playSound(p.getLocation(), Sound.ENTITY_VILLAGER_NO, 0.8f, 1.0f);
                 return;
             }
-            clanView.put(p.getUniqueId(), prof.clanId);
-            page.putIfAbsent(p.getUniqueId(), 0);
+            clanView.put(p.getUniqueId(), Long.valueOf(prof.clanId));
+            page.putIfAbsent(p.getUniqueId(), Integer.valueOf(0));
             loadMembersAndOpen(p, prof);
         });
     }
@@ -66,8 +67,8 @@ public final class ClanMembersMenu implements Listener {
                 data.put(p.getUniqueId(), list);
                 Bukkit.getScheduler().runTask(plugin, () -> openInventory(p, prof, list));
             } catch (Exception e) {
-                Bukkit.getScheduler().runTask(plugin, () -> p.sendMessage(plugin.lang().prefixed("messages.load_failed")));
-                e.printStackTrace();
+                Bukkit.getScheduler().runTask(plugin, () -> p.sendMessage(plugin.lang().error("messages.load_failed")));
+                LoggerUtil.error("Fehler beim Laden der Clan-Mitglieder für " + p.getName(), e);
             }
         });
     }
@@ -81,15 +82,15 @@ public final class ClanMembersMenu implements Listener {
         inv.setItem(45, prev());
         inv.setItem(53, next());
 
-        int pg = page.getOrDefault(p.getUniqueId(), 0);
+        int pg = page.getOrDefault(p.getUniqueId(), Integer.valueOf(0)).intValue();
         int perPage = 28;
         int start = pg * perPage;
 
         List<Integer> slots = Arrays.asList(
-                10,11,12,13,14,15,16,
-                19,20,21,22,23,24,25,
-                28,29,30,31,32,33,34,
-                37,38,39,40,41,42,43
+                10, 11, 12, 13, 14, 15, 16,
+                19, 20, 21, 22, 23, 24, 25,
+                28, 29, 30, 31, 32, 33, 34,
+                37, 38, 39, 40, 41, 42, 43
         );
 
         for (int i = 0; i < slots.size(); i++) {
@@ -125,15 +126,15 @@ public final class ClanMembersMenu implements Listener {
             return;
         }
         if (slot == 45) {
-            int pg = page.getOrDefault(u, 0);
-            if (pg > 0) page.put(u, pg - 1);
+            int pg = page.getOrDefault(u, Integer.valueOf(0)).intValue();
+            if (pg > 0) page.put(u, Integer.valueOf(pg - 1));
             open(p);
             p.playSound(p.getLocation(), Sound.UI_BUTTON_CLICK, 0.7f, 1.2f);
             return;
         }
         if (slot == 53) {
-            int pg = page.getOrDefault(u, 0);
-            page.put(u, pg + 1);
+            int pg = page.getOrDefault(u, Integer.valueOf(0)).intValue();
+            page.put(u, Integer.valueOf(pg + 1));
             open(p);
             p.playSound(p.getLocation(), Sound.UI_BUTTON_CLICK, 0.7f, 1.2f);
             return;
@@ -194,8 +195,8 @@ public final class ClanMembersMenu implements Listener {
                 "clan", prof.clanName,
                 "tag", prof.clanTag));
         meta.setLore(plugin.lang().getList("gui.members.header.lore",
-                "members", members,
-                "page", (pg + 1)));
+                "members", Integer.valueOf(members),
+                "page", Integer.valueOf(pg + 1)));
         it.setItemMeta(meta);
         return it;
     }
