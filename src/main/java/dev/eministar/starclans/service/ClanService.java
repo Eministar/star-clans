@@ -2,6 +2,7 @@ package dev.eministar.starclans.service;
 
 import dev.eministar.starclans.StarClans;
 import dev.eministar.starclans.database.ClanRepository;
+import dev.eministar.starclans.model.BankTransactionType;
 import dev.eministar.starclans.model.ClanProfile;
 import dev.eministar.starclans.model.MemberRole;
 import dev.eministar.starclans.utils.LoggerUtil;
@@ -10,6 +11,7 @@ import net.md_5.bungee.api.chat.ClickEvent;
 import net.md_5.bungee.api.chat.ComponentBuilder;
 import net.md_5.bungee.api.chat.TextComponent;
 import org.bukkit.Bukkit;
+import org.bukkit.ChatColor;
 import org.bukkit.Location;
 import org.bukkit.Sound;
 import org.bukkit.World;
@@ -47,6 +49,130 @@ public final class ClanService {
     public ClanService(StarClans plugin, ClanRepository repo) {
         this.plugin = plugin;
         this.repo = repo;
+    }
+
+    public boolean isBankEnabled() {
+        return plugin.getConfig().getBoolean("clan.bank.enabled", true);
+    }
+
+    public boolean isBankHistoryEnabled() {
+        return isBankEnabled() && plugin.getConfig().getBoolean("clan.bank.history.enabled", true);
+    }
+
+    public boolean isProfileEnabled() {
+        return plugin.getConfig().getBoolean("clan.profile.enabled", true);
+    }
+
+    public boolean isRecruitingEnabled() {
+        return isProfileEnabled() && plugin.getConfig().getBoolean("clan.profile.recruiting.enabled", true);
+    }
+
+    public boolean isLeaderboardProfileOpenEnabled() {
+        return isProfileEnabled() && plugin.getConfig().getBoolean("clan.profile.openFromLeaderboard", true);
+    }
+
+    public boolean isChatSuffixEnabled() {
+        return plugin.getConfig().getBoolean("clan.chat.suffix.enabled", true);
+    }
+
+    public boolean isChatSuffixVisibleInGlobalChat() {
+        return isChatSuffixEnabled() && plugin.getConfig().getBoolean("clan.chat.suffix.showInGlobalChat", true);
+    }
+
+    public boolean isChatSuffixVisibleInClanChat() {
+        return isChatSuffixEnabled() && plugin.getConfig().getBoolean("clan.chat.suffix.showInClanChat", true);
+    }
+
+    public int bankHistoryPageSize() {
+        return Math.max(1, Math.min(14, plugin.getConfig().getInt("clan.bank.history.pageSize", 14)));
+    }
+
+    public int bankHistoryRetention() {
+        return Math.max(0, plugin.getConfig().getInt("clan.bank.history.maxEntriesPerClan", 200));
+    }
+
+    public int chatSuffixMaxLength() {
+        return Math.max(1, plugin.getConfig().getInt("clan.chat.suffix.maxVisibleLength", 24));
+    }
+
+    public List<Double> bankQuickAmounts(boolean withdraw) {
+        String path = withdraw ? "clan.bank.quickAmounts.withdraw" : "clan.bank.quickAmounts.deposit";
+        List<Double> values = new ArrayList<>();
+        for (double value : plugin.getConfig().getDoubleList(path)) {
+            if (value > 0) {
+                values.add(Double.valueOf(value));
+            }
+        }
+        return values;
+    }
+
+    public boolean allowBankCustomInput() {
+        return plugin.getConfig().getBoolean("clan.bank.quickAmounts.allowCustomInput", true);
+    }
+
+    public boolean allowDepositAllButton() {
+        return plugin.getConfig().getBoolean("clan.bank.quickAmounts.allowDepositAll", true);
+    }
+
+    public boolean allowWithdrawAllButton() {
+        return plugin.getConfig().getBoolean("clan.bank.quickAmounts.allowWithdrawAll", true);
+    }
+
+    public MemberRole configuredRole(String path, MemberRole fallback) {
+        String raw = plugin.getConfig().getString(path, fallback.name());
+        if (raw == null || raw.isBlank()) {
+            return fallback;
+        }
+        try {
+            return MemberRole.valueOf(raw.trim().toUpperCase(Locale.ROOT));
+        } catch (Exception ignored) {
+            return fallback;
+        }
+    }
+
+    public String formatClanTag(String tagStyle, String tag) {
+        String style = tagStyle == null || tagStyle.isEmpty() ? "§b" : tagStyle;
+        String safeTag = tag == null ? "" : tag;
+        if (safeTag.isEmpty()) {
+            return "";
+        }
+        return plugin.lang().get("messages.chat.tag_suffix", "style", style, "tag", safeTag);
+    }
+
+    public String formatChatSuffix(String chatSuffix) {
+        if (!isChatSuffixEnabled()) return "";
+        String safe = chatSuffix == null ? "" : chatSuffix.trim();
+        if (safe.isEmpty()) return "";
+        return plugin.lang().get("messages.chat.chat_suffix_format", "suffix", safe);
+    }
+
+    public String sanitizeChatSuffixInput(String input) {
+        String raw = input == null ? "" : input.trim();
+        if (raw.isEmpty()) {
+            return "";
+        }
+
+        boolean allowColors = plugin.getConfig().getBoolean("clan.chat.suffix.allowColorCodes", true);
+        boolean allowHex = plugin.getConfig().getBoolean("clan.chat.suffix.allowHexColors", true);
+
+        String normalized;
+        if (!allowColors) {
+            normalized = ChatColor.stripColor(plugin.lang().colorize(raw));
+        } else {
+            String withoutHex = allowHex ? raw : raw.replaceAll("(?i)&\\#[0-9A-F]{6}", "");
+            normalized = plugin.lang().colorize(withoutHex);
+        }
+
+        String visible = ChatColor.stripColor(normalized);
+        if (visible == null) {
+            visible = normalized;
+        }
+
+        if (visible.length() > chatSuffixMaxLength()) {
+            return null;
+        }
+
+        return normalized.trim();
     }
 
     public void clearCache() {
@@ -230,63 +356,82 @@ public final class ClanService {
     public void requestJoin(Player player, String clanInput, Consumer<String> msg) {
         Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
             try {
-                if (repo.getClanIdByMember(player.getUniqueId()) > 0) {
-                    syncMsg(msg, plugin.lang().get("messages.already_in_clan"));
-                    return;
-                }
-
-                long requestCooldown = Math.max(0, plugin.getConfig().getLong("clan.joinRequest.cooldownSeconds", 20));
-                long wait = cooldownLeft(joinCooldownUntil, player.getUniqueId());
-                if (wait > 0) {
-                    syncMsg(msg, plugin.lang().get("messages.join.cooldown", "seconds", Long.valueOf(wait)));
-                    return;
-                }
-
                 ClanRepository.ClanLookupRow clan = repo.findClanByNameOrTag(clanInput);
                 if (clan == null) {
                     syncMsg(msg, plugin.lang().get("messages.join.clan_not_found"));
                     return;
                 }
-
-                ClanRepository.ClanSettingsRow settings = repo.getSettings(clan.clanId);
-                if (!settings.openInvite) {
-                    syncMsg(msg, plugin.lang().get("messages.join.open_invite_off"));
-                    return;
-                }
-
-                if (repo.hasActiveInviteForTargetClan(player.getUniqueId(), clan.clanId)) {
-                    syncMsg(msg, plugin.lang().get("messages.join.already_pending"));
-                    return;
-                }
-
-                int minutes = plugin.getConfig().getInt("clan.invite.expireMinutes", 60);
-                long requestId = repo.createJoinRequest(clan.clanId, player.getUniqueId(), minutes);
-                if (requestId <= 0) {
-                    syncMsg(msg, plugin.lang().get("messages.join.fail"));
-                    return;
-                }
-
-                if (requestCooldown > 0) {
-                    setCooldown(joinCooldownUntil, player.getUniqueId(), requestCooldown);
-                }
-
-                ClanRepository.InviteRow inv = repo.getInviteForApproval(requestId, clan.clanId);
-
-                sync(() -> {
-                    player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 0.8f, 1.3f);
-                    msg.accept(plugin.lang().get("messages.join.request_sent",
-                            "clan", clan.clanName,
-                            "tag", clan.clanTag));
-                });
-
-                if (inv != null) {
-                    notifyInviteApproval(inv);
-                }
+                requestJoinResolved(player, clan, msg);
             } catch (Exception e) {
                 syncMsg(msg, plugin.lang().get("messages.join.fail"));
                 LoggerUtil.error("Fehler bei der Beitrittsanfrage von " + player.getName(), e);
             }
         });
+    }
+
+    public void requestJoin(Player player, long clanId, Consumer<String> msg) {
+        Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
+            try {
+                ClanRepository.ClanLookupRow clan = repo.getClanLookup(clanId);
+                if (clan == null) {
+                    syncMsg(msg, plugin.lang().get("messages.join.clan_not_found"));
+                    return;
+                }
+                requestJoinResolved(player, clan, msg);
+            } catch (Exception e) {
+                syncMsg(msg, plugin.lang().get("messages.join.fail"));
+                LoggerUtil.error("Fehler bei der Beitrittsanfrage von " + player.getName(), e);
+            }
+        });
+    }
+
+    private void requestJoinResolved(Player player, ClanRepository.ClanLookupRow clan, Consumer<String> msg) throws Exception {
+        if (repo.getClanIdByMember(player.getUniqueId()) > 0) {
+            syncMsg(msg, plugin.lang().get("messages.already_in_clan"));
+            return;
+        }
+
+        long requestCooldown = Math.max(0, plugin.getConfig().getLong("clan.joinRequest.cooldownSeconds", 20));
+        long wait = cooldownLeft(joinCooldownUntil, player.getUniqueId());
+        if (wait > 0) {
+            syncMsg(msg, plugin.lang().get("messages.join.cooldown", "seconds", Long.valueOf(wait)));
+            return;
+        }
+
+        ClanRepository.ClanSettingsRow settings = repo.getSettings(clan.clanId);
+        if (!settings.openInvite) {
+            syncMsg(msg, plugin.lang().get("messages.join.open_invite_off"));
+            return;
+        }
+
+        if (repo.hasActiveInviteForTargetClan(player.getUniqueId(), clan.clanId)) {
+            syncMsg(msg, plugin.lang().get("messages.join.already_pending"));
+            return;
+        }
+
+        int minutes = plugin.getConfig().getInt("clan.invite.expireMinutes", 60);
+        long requestId = repo.createJoinRequest(clan.clanId, player.getUniqueId(), minutes);
+        if (requestId <= 0) {
+            syncMsg(msg, plugin.lang().get("messages.join.fail"));
+            return;
+        }
+
+        if (requestCooldown > 0) {
+            setCooldown(joinCooldownUntil, player.getUniqueId(), requestCooldown);
+        }
+
+        ClanRepository.InviteRow inv = repo.getInviteForApproval(requestId, clan.clanId);
+
+        sync(() -> {
+            player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 0.8f, 1.3f);
+            msg.accept(plugin.lang().get("messages.join.request_sent",
+                    "clan", clan.clanName,
+                    "tag", clan.clanTag));
+        });
+
+        if (inv != null) {
+            notifyInviteApproval(inv);
+        }
     }
 
     public void acceptInvite(Player player, long inviteId, Consumer<String> msg) {
@@ -871,6 +1016,11 @@ public final class ClanService {
     }
 
     public void setChatSuffix(Player actor, String suffix, Consumer<String> msg) {
+        if (!isChatSuffixEnabled()) {
+            msg.accept(plugin.lang().get("messages.chat_suffix.disabled"));
+            return;
+        }
+
         Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
             try {
                 long clanId = repo.getClanIdByMember(actor.getUniqueId());
@@ -880,22 +1030,28 @@ public final class ClanService {
                 }
 
                 MemberRole r = repo.getRole(actor.getUniqueId());
-                if (r == MemberRole.MEMBER) {
+                MemberRole minRole = configuredRole("clan.chat.suffix.minRoleChange", MemberRole.OFFICER);
+                if (!r.isAtLeast(minRole)) {
                     syncMsg(msg, plugin.lang().get("messages.no_rights"));
                     return;
                 }
 
-                String tmp = suffix == null ? "" : suffix.trim();
-                if (tmp.length() > 24) tmp = tmp.substring(0, 24);
-
-                final String clean = tmp;
+                final String clean = sanitizeChatSuffixInput(suffix);
+                if (clean == null) {
+                    syncMsg(msg, plugin.lang().get("messages.chat_suffix.too_long", "max", Integer.valueOf(chatSuffixMaxLength())));
+                    return;
+                }
                 repo.setChatSuffix(clanId, clean);
                 clearCache();
 
                 final String out = clean.isEmpty()
                         ? plugin.lang().get("messages.chat_suffix.removed")
                         : plugin.lang().get("messages.chat_suffix.saved");
-                sync(() -> msg.accept(out));
+                sync(() -> {
+                    actor.playSound(actor.getLocation(), Sound.UI_BUTTON_CLICK, 0.8f, 1.4f);
+                    msg.accept(out);
+                });
+                notifyClan(clanId, plugin.lang().get("messages.chat_suffix.changed_broadcast", "player", actor.getName()), Sound.UI_BUTTON_CLICK);
 
             } catch (Exception e) {
                 syncMsg(msg, plugin.lang().get("messages.chat_suffix.fail"));
@@ -904,9 +1060,60 @@ public final class ClanService {
         });
     }
 
+    public void depositAll(Player player, Consumer<String> msg) {
+        if (!allowDepositAllButton()) {
+            msg.accept(plugin.lang().get("messages.bank.all_disabled"));
+            return;
+        }
+        sync(() -> {
+            if (!VaultHook.hasEconomy()) {
+                msg.accept(plugin.lang().get("messages.bank.vault_missing"));
+                return;
+            }
+            double amount = VaultHook.eco().getBalance(player);
+            if (amount <= 0) {
+                msg.accept(plugin.lang().get("messages.bank.nothing_to_deposit"));
+                return;
+            }
+            deposit(player, amount, msg);
+        });
+    }
+
+    public void withdrawAll(Player player, Consumer<String> msg) {
+        if (!allowWithdrawAllButton()) {
+            msg.accept(plugin.lang().get("messages.bank.all_disabled"));
+            return;
+        }
+        Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
+            try {
+                ClanProfile profile = repo.getFullProfile(player.getUniqueId());
+                if (!profile.inClan) {
+                    syncMsg(msg, plugin.lang().get("messages.not_in_clan"));
+                    return;
+                }
+                if (profile.balance <= 0) {
+                    syncMsg(msg, plugin.lang().get("messages.bank.nothing_to_withdraw"));
+                    return;
+                }
+                withdraw(player, profile.balance, msg);
+            } catch (Exception e) {
+                syncMsg(msg, plugin.lang().get("messages.bank.fail"));
+                LoggerUtil.error("Fehler beim Abheben des gesamten Clan-Guthabens durch " + player.getName(), e);
+            }
+        });
+    }
+
     public void deposit(Player player, double amount, Consumer<String> msg) {
+        if (!isBankEnabled()) {
+            msg.accept(plugin.lang().get("messages.bank.disabled"));
+            return;
+        }
         if (amount <= 0) {
             msg.accept(plugin.lang().get("messages.bank.invalid_amount"));
+            return;
+        }
+        if (!VaultHook.hasEconomy()) {
+            msg.accept(plugin.lang().get("messages.bank.vault_missing"));
             return;
         }
 
@@ -925,6 +1132,7 @@ public final class ClanService {
                 }
 
                 repo.deposit(p.clanId, amount);
+                recordBankTransaction(p.clanId, player.getUniqueId(), player.getName(), BankTransactionType.DEPOSIT, amount, p.balance + amount, "");
                 invalidate(player.getUniqueId());
 
                 sync(() -> {
@@ -940,8 +1148,16 @@ public final class ClanService {
     }
 
     public void withdraw(Player player, double amount, Consumer<String> msg) {
+        if (!isBankEnabled()) {
+            msg.accept(plugin.lang().get("messages.bank.disabled"));
+            return;
+        }
         if (amount <= 0) {
             msg.accept(plugin.lang().get("messages.bank.invalid_amount"));
+            return;
+        }
+        if (!VaultHook.hasEconomy()) {
+            msg.accept(plugin.lang().get("messages.bank.vault_missing"));
             return;
         }
 
@@ -953,17 +1169,19 @@ public final class ClanService {
                     return;
                 }
 
-                if (!p.role.isAtLeast(MemberRole.OFFICER)) {
+                MemberRole minRole = configuredRole("clan.bank.withdraw.minRole", MemberRole.OFFICER);
+                if (!p.role.isAtLeast(minRole)) {
                     syncMsg(msg, plugin.lang().get("messages.no_rights"));
                     return;
                 }
 
                 if (p.balance < amount) {
-                    syncMsg(msg, plugin.lang().get("messages.bank.clan_not_enough_money", "amount", money(amount)));
+                    syncMsg(msg, plugin.lang().get("messages.bank.clan_not_enough_money", "balance", money(p.balance)));
                     return;
                 }
 
                 repo.withdraw(p.clanId, amount);
+                recordBankTransaction(p.clanId, player.getUniqueId(), player.getName(), BankTransactionType.WITHDRAW, amount, p.balance - amount, "");
                 invalidate(player.getUniqueId());
 
                 // Give money to player
@@ -977,6 +1195,17 @@ public final class ClanService {
             } catch (Exception e) {
                 syncMsg(msg, plugin.lang().get("messages.bank.fail"));
                 LoggerUtil.error("Fehler beim Abheben von " + amount + " durch " + player.getName(), e);
+            }
+        });
+    }
+
+    public void recordTaxPayment(UUID playerUuid, String playerName, long clanId, double amount, double balanceAfter) {
+        if (!isBankHistoryEnabled()) return;
+        Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
+            try {
+                recordBankTransaction(clanId, playerUuid, playerName, BankTransactionType.TAX, amount, balanceAfter, "");
+            } catch (Exception e) {
+                LoggerUtil.error("Fehler beim Speichern der Clan-Bank-Historie für Tax-Event.", e);
             }
         });
     }
@@ -1147,6 +1376,15 @@ public final class ClanService {
         plugin.discord().sendEvent(eventKey, title, description, color);
     }
 
+    private void recordBankTransaction(long clanId, UUID actorUuid, String actorName, BankTransactionType type,
+                                       double amount, double balanceAfter, String note) throws Exception {
+        if (!isBankHistoryEnabled()) return;
+        repo.addBankTransaction(clanId, actorUuid, actorName, type, amount, balanceAfter, note);
+        int keep = bankHistoryRetention();
+        if (keep > 0) {
+            repo.trimBankTransactions(clanId, keep);
+        }
+    }
 
     private void sync(Runnable r) {
         Bukkit.getScheduler().runTask(plugin, r);

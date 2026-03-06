@@ -36,6 +36,7 @@ public final class StarClans extends JavaPlugin {
     private ClanTagStyleMenu tagStyleMenu;
     private ClanBankMenu bankMenu;
     private ClanLeaderboardMenu leaderboardMenu;
+    private ClanPublicProfileMenu profileMenu;
 
     @Override
     public void onEnable() {
@@ -74,9 +75,11 @@ public final class StarClans extends JavaPlugin {
         this.manageMenu = new ClanMemberManageMenu(this, service, repo, membersMenu);
         this.membersMenu.bindManageMenu(manageMenu);
 
-        this.settingsMenu = new ClanSettingsMenu(this, service, repo, mainMenu);
-        this.bankMenu = new ClanBankMenu(this, service);
-        this.leaderboardMenu = new ClanLeaderboardMenu(this, service);
+        this.profileMenu = new ClanPublicProfileMenu(this, service, repo, mainMenu);
+        this.settingsMenu = new ClanSettingsMenu(this, service, repo, mainMenu, profileMenu);
+        this.bankMenu = new ClanBankMenu(this, service, repo);
+        this.leaderboardMenu = new ClanLeaderboardMenu(this, service, profileMenu);
+        this.profileMenu.bindLeaderboardMenu(leaderboardMenu);
 
         getServer().getPluginManager().registerEvents(mainMenu, this);
         getServer().getPluginManager().registerEvents(createMenu, this);
@@ -87,6 +90,7 @@ public final class StarClans extends JavaPlugin {
         getServer().getPluginManager().registerEvents(tagStyleMenu, this);
         getServer().getPluginManager().registerEvents(bankMenu, this);
         getServer().getPluginManager().registerEvents(leaderboardMenu, this);
+        getServer().getPluginManager().registerEvents(profileMenu, this);
 
         getServer().getPluginManager().registerEvents(new ProfilePreloadListener(this, service, repo), this);
         getServer().getPluginManager().registerEvents(new GlobalChatListener(this, service, repo), this);
@@ -95,7 +99,7 @@ public final class StarClans extends JavaPlugin {
         CommandRegister.register(
                 this, service, repo,
                 mainMenu, createMenu, invitesMenu, membersMenu, manageMenu,
-                tagStyleMenu, settingsMenu, bankMenu, leaderboardMenu
+                tagStyleMenu, settingsMenu, bankMenu, leaderboardMenu, profileMenu
         );
 
         if (Bukkit.getPluginManager().getPlugin("PlaceholderAPI") != null) {

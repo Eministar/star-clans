@@ -1,5 +1,6 @@
 package dev.eministar.starclans.database;
 
+import dev.eministar.starclans.model.BankTransactionType;
 import dev.eministar.starclans.model.ClanProfile;
 import dev.eministar.starclans.model.MemberRole;
 
@@ -62,6 +63,63 @@ public final class ClanRepository {
             this.tag = tag == null ? "" : tag;
             this.balance = balance;
             this.memberCount = memberCount;
+        }
+    }
+
+    public static final class ClanPublicProfileRow {
+        public final long clanId;
+        public final String name;
+        public final String tag;
+        public final double balance;
+        public final int memberCount;
+        public final long createdAtMillis;
+        public final boolean openInvite;
+        public final String motd;
+        public final double taxRate;
+        public final String tagStyle;
+        public final String chatSuffix;
+        public final String leaderName;
+
+        public ClanPublicProfileRow(long clanId, String name, String tag, double balance, int memberCount,
+                                    long createdAtMillis, boolean openInvite, String motd, double taxRate,
+                                    String tagStyle, String chatSuffix, String leaderName) {
+            this.clanId = clanId;
+            this.name = name == null ? "" : name;
+            this.tag = tag == null ? "" : tag;
+            this.balance = balance;
+            this.memberCount = memberCount;
+            this.createdAtMillis = createdAtMillis;
+            this.openInvite = openInvite;
+            this.motd = motd == null ? "" : motd;
+            this.taxRate = taxRate;
+            this.tagStyle = tagStyle == null ? "" : tagStyle;
+            this.chatSuffix = chatSuffix == null ? "" : chatSuffix;
+            this.leaderName = leaderName == null ? "" : leaderName;
+        }
+    }
+
+    public static final class BankTransactionRow {
+        public final long id;
+        public final long clanId;
+        public final UUID actorUuid;
+        public final String actorName;
+        public final BankTransactionType type;
+        public final double amount;
+        public final double balanceAfter;
+        public final String note;
+        public final long createdAtMillis;
+
+        public BankTransactionRow(long id, long clanId, UUID actorUuid, String actorName, BankTransactionType type,
+                                  double amount, double balanceAfter, String note, long createdAtMillis) {
+            this.id = id;
+            this.clanId = clanId;
+            this.actorUuid = actorUuid;
+            this.actorName = actorName == null ? "" : actorName;
+            this.type = type == null ? BankTransactionType.DEPOSIT : type;
+            this.amount = amount;
+            this.balanceAfter = balanceAfter;
+            this.note = note == null ? "" : note;
+            this.createdAtMillis = createdAtMillis;
         }
     }
 
@@ -320,6 +378,20 @@ public final class ClanRepository {
         }
     }
 
+    public ClanLookupRow getClanLookup(long clanId) throws Exception {
+        ensureResolved();
+        String sql = "SELECT " + q(cClanIdClans) + "," + q(cClanName) + "," + q(cClanTag) +
+                " FROM " + q(tClans) + " WHERE " + q(cClanIdClans) + "=? LIMIT 1";
+        try (Connection con = c();
+             PreparedStatement ps = con.prepareStatement(sql)) {
+            ps.setLong(1, clanId);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (!rs.next()) return null;
+                return new ClanLookupRow(rs.getLong(1), rs.getString(2), rs.getString(3));
+            }
+        }
+    }
+
     public MemberRole getRole(UUID member) throws Exception {
         ensureResolved();
         String sql = "SELECT " + q(cMemberRole) + " FROM " + q(tMembers) + " WHERE " + q(cMemberUuid) + "=? LIMIT 1";
@@ -533,6 +605,10 @@ public final class ClanRepository {
                     ps.executeUpdate();
                 }
                 try (PreparedStatement ps = con.prepareStatement("DELETE FROM " + q(tSettings) + " WHERE " + q(cSettingsClanId) + "=?")) {
+                    ps.setLong(1, clanId);
+                    ps.executeUpdate();
+                }
+                try (PreparedStatement ps = con.prepareStatement("DELETE FROM `clan_bank_history` WHERE `clan_id`=?")) {
                     ps.setLong(1, clanId);
                     ps.executeUpdate();
                 }
@@ -873,6 +949,46 @@ public final class ClanRepository {
         }
     }
 
+    public ClanPublicProfileRow getClanPublicProfile(long clanId) throws Exception {
+        ensureResolved();
+        String sql = "SELECT c." + q(cClanIdClans) + ", c." + q(cClanName) + ", c." + q(cClanTag) + ", c." + q(cClanBalance) +
+                ", c.created_at, " +
+                "COALESCE(s." + q(cSettingsOpenInvite) + ", 0) AS open_invite_value, " +
+                "COALESCE(s." + q(cSettingsMotd) + ", '') AS motd_value, " +
+                "COALESCE(s." + q(cSettingsTaxRate) + ", 0.0) AS tax_value, " +
+                "COALESCE(cos." + q(cCosTagStyle) + ", '') AS tag_style_value, " +
+                "COALESCE(cos." + q(cCosChatSuffix) + ", '') AS chat_suffix_value, " +
+                "(SELECT COUNT(*) FROM " + q(tMembers) + " m WHERE m." + q(cMembersClanId) + " = c." + q(cClanIdClans) + ") AS member_count, " +
+                "(SELECT m2." + q(cMemberName) + " FROM " + q(tMembers) + " m2 WHERE m2." + q(cMembersClanId) + " = c." + q(cClanIdClans) +
+                " AND m2." + q(cMemberRole) + " = ? LIMIT 1) AS leader_name " +
+                "FROM " + q(tClans) + " c " +
+                "LEFT JOIN " + q(tSettings) + " s ON s." + q(cSettingsClanId) + " = c." + q(cClanIdClans) + " " +
+                "LEFT JOIN " + q(tCosmetics) + " cos ON cos." + q(cCosClanId) + " = c." + q(cClanIdClans) + " " +
+                "WHERE c." + q(cClanIdClans) + "=? LIMIT 1";
+        try (Connection con = c();
+             PreparedStatement ps = con.prepareStatement(sql)) {
+            ps.setString(1, MemberRole.LEADER.name());
+            ps.setLong(2, clanId);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (!rs.next()) return null;
+                return new ClanPublicProfileRow(
+                        rs.getLong(1),
+                        rs.getString(2),
+                        rs.getString(3),
+                        rs.getDouble(4),
+                        rs.getInt("member_count"),
+                        toMillis(rs.getTimestamp(5)),
+                        rs.getBoolean("open_invite_value"),
+                        rs.getString("motd_value"),
+                        rs.getDouble("tax_value"),
+                        rs.getString("tag_style_value"),
+                        rs.getString("chat_suffix_value"),
+                        rs.getString("leader_name")
+                );
+            }
+        }
+    }
+
     public boolean toggleOpenInvite(long clanId) throws Exception {
         ensureResolved();
         if (cSettingsOpenInvite == null) return false;
@@ -906,6 +1022,18 @@ public final class ClanRepository {
         return listMembers(clanId);
     }
 
+    public double getClanBalance(long clanId) throws Exception {
+        ensureResolved();
+        String sql = "SELECT " + q(cClanBalance) + " FROM " + q(tClans) + " WHERE " + q(cClanIdClans) + "=? LIMIT 1";
+        try (Connection con = c();
+             PreparedStatement ps = con.prepareStatement(sql)) {
+            ps.setLong(1, clanId);
+            try (ResultSet rs = ps.executeQuery()) {
+                return rs.next() ? rs.getDouble(1) : 0.0;
+            }
+        }
+    }
+
     public void deposit(long clanId, double amount) throws Exception {
         ensureResolved();
         String sql = "UPDATE " + q(tClans) + " SET " + q(cClanBalance) + "=" + q(cClanBalance) + "+? WHERE " + q(cClanIdClans) + "=?";
@@ -924,6 +1052,108 @@ public final class ClanRepository {
              PreparedStatement ps = con.prepareStatement(sql)) {
             ps.setDouble(1, amount);
             ps.setLong(2, clanId);
+            ps.executeUpdate();
+        }
+    }
+
+    public void addBankTransaction(long clanId, UUID actorUuid, String actorName, BankTransactionType type,
+                                   double amount, double balanceAfter, String note) throws Exception {
+        String sql = "INSERT INTO `clan_bank_history` (`clan_id`,`actor_uuid`,`actor_name`,`type`,`amount`,`balance_after`,`note`) VALUES (?,?,?,?,?,?,?)";
+        try (Connection con = c();
+             PreparedStatement ps = con.prepareStatement(sql)) {
+            ps.setLong(1, clanId);
+            if (actorUuid == null) {
+                ps.setNull(2, Types.VARCHAR);
+            } else {
+                ps.setString(2, actorUuid.toString());
+            }
+            ps.setString(3, actorName == null ? "" : actorName);
+            ps.setString(4, type == null ? BankTransactionType.DEPOSIT.name() : type.name());
+            ps.setDouble(5, amount);
+            ps.setDouble(6, balanceAfter);
+            ps.setString(7, note == null ? "" : note);
+            ps.executeUpdate();
+        }
+    }
+
+    public int countBankTransactions(long clanId) throws Exception {
+        String sql = "SELECT COUNT(*) FROM `clan_bank_history` WHERE `clan_id`=?";
+        try (Connection con = c();
+             PreparedStatement ps = con.prepareStatement(sql)) {
+            ps.setLong(1, clanId);
+            try (ResultSet rs = ps.executeQuery()) {
+                return rs.next() ? rs.getInt(1) : 0;
+            }
+        }
+    }
+
+    public List<BankTransactionRow> getBankTransactions(long clanId, int limit, int offset) throws Exception {
+        int safeLimit = Math.max(1, limit);
+        int safeOffset = Math.max(0, offset);
+        String sql = "SELECT `id`,`clan_id`,`actor_uuid`,`actor_name`,`type`,`amount`,`balance_after`,`note`,`created_at` " +
+                "FROM `clan_bank_history` WHERE `clan_id`=? ORDER BY `created_at` DESC, `id` DESC LIMIT ? OFFSET ?";
+        List<BankTransactionRow> out = new ArrayList<>();
+        try (Connection con = c();
+             PreparedStatement ps = con.prepareStatement(sql)) {
+            ps.setLong(1, clanId);
+            ps.setInt(2, safeLimit);
+            ps.setInt(3, safeOffset);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    UUID actorUuid = null;
+                    String actorUuidRaw = rs.getString("actor_uuid");
+                    if (actorUuidRaw != null && !actorUuidRaw.isBlank()) {
+                        try {
+                            actorUuid = UUID.fromString(actorUuidRaw);
+                        } catch (IllegalArgumentException ignored) {
+                            actorUuid = null;
+                        }
+                    }
+
+                    BankTransactionType type;
+                    try {
+                        type = BankTransactionType.valueOf(rs.getString("type"));
+                    } catch (Exception ignored) {
+                        type = BankTransactionType.DEPOSIT;
+                    }
+
+                    out.add(new BankTransactionRow(
+                            rs.getLong("id"),
+                            rs.getLong("clan_id"),
+                            actorUuid,
+                            rs.getString("actor_name"),
+                            type,
+                            rs.getDouble("amount"),
+                            rs.getDouble("balance_after"),
+                            rs.getString("note"),
+                            toMillis(rs.getTimestamp("created_at"))
+                    ));
+                }
+            }
+        }
+        return out;
+    }
+
+    public void trimBankTransactions(long clanId, int keep) throws Exception {
+        if (keep <= 0) return;
+        String sql = """
+                DELETE FROM `clan_bank_history`
+                WHERE `clan_id`=?
+                  AND `id` NOT IN (
+                    SELECT `id` FROM (
+                        SELECT `id`
+                        FROM `clan_bank_history`
+                        WHERE `clan_id`=?
+                        ORDER BY `created_at` DESC, `id` DESC
+                        LIMIT ?
+                    ) AS keep_rows
+                  )
+                """;
+        try (Connection con = c();
+             PreparedStatement ps = con.prepareStatement(sql)) {
+            ps.setLong(1, clanId);
+            ps.setLong(2, clanId);
+            ps.setInt(3, keep);
             ps.executeUpdate();
         }
     }

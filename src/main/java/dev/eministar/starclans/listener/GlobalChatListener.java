@@ -41,40 +41,37 @@ public final class GlobalChatListener implements Listener {
             e.setCancelled(true);
             String msg = e.getMessage();
 
-            Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
-                try {
-                    ClanRepository.ClanCosmeticsRow cos = repo.getCosmetics(prof.clanId);
-                    String tagStyle = cos.tagStyle.isEmpty() ? "§b" : cos.tagStyle;
-                    String suffix = plugin.lang().get("messages.chat.tag_suffix",
-                            "style", tagStyle,
-                            "tag", prof.clanTag);
-                    MemberRole role = prof.role == null ? MemberRole.MEMBER : prof.role;
-                    String hover = plugin.lang().get("messages.chat.hover",
-                            "role_color", roleColor(role),
-                            "role", plugin.lang().role(role));
+            try {
+                ClanRepository.ClanCosmeticsRow cos = repo.getCosmetics(prof.clanId);
+                String tagSuffix = service.formatClanTag(cos.tagStyle, prof.clanTag);
+                String chatSuffix = service.isChatSuffixVisibleInClanChat() ? service.formatChatSuffix(cos.chatSuffix) : "";
+                MemberRole role = prof.role == null ? MemberRole.MEMBER : prof.role;
+                String hover = plugin.lang().get("messages.chat.hover",
+                        "role_color", roleColor(role),
+                        "role", plugin.lang().role(role));
 
-                    TextComponent prefix = new TextComponent(plugin.lang().get("messages.chat.clan_prefix"));
-                    TextComponent name = new TextComponent(p.getName());
-                    name.setHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, new ComponentBuilder(hover).create()));
-                    name.setClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, "/clan members " + p.getName()));
-                    TextComponent suffixComp = new TextComponent(suffix);
-                    TextComponent rest = new TextComponent(plugin.lang().get("messages.chat.clan_message_tail", "message", msg));
-                    BaseComponent[] out = new BaseComponent[]{prefix, name, suffixComp, rest};
+                TextComponent prefix = new TextComponent(plugin.lang().get("messages.chat.clan_prefix"));
+                TextComponent name = new TextComponent(p.getName());
+                name.setHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, new ComponentBuilder(hover).create()));
+                name.setClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, "/clan members " + p.getName()));
+                TextComponent tagComp = new TextComponent(tagSuffix);
+                TextComponent chatSuffixComp = new TextComponent(chatSuffix);
+                TextComponent rest = new TextComponent(plugin.lang().get("messages.chat.clan_message_tail", "message", msg));
+                BaseComponent[] out = new BaseComponent[]{prefix, name, tagComp, chatSuffixComp, rest};
 
-                    java.util.List<ClanRepository.MemberRow> members = repo.listMembers(prof.clanId);
-                    Bukkit.getScheduler().runTask(plugin, () -> {
-                        for (ClanRepository.MemberRow m : members) {
-                            Player t = Bukkit.getPlayer(m.uuid);
-                            if (t != null) {
-                                t.spigot().sendMessage(out);
-                                t.playSound(t.getLocation(), Sound.ENTITY_EXPERIENCE_ORB_PICKUP, 0.3f, 1.5f);
-                            }
+                java.util.List<ClanRepository.MemberRow> members = repo.listMembers(prof.clanId);
+                Bukkit.getScheduler().runTask(plugin, () -> {
+                    for (ClanRepository.MemberRow m : members) {
+                        Player t = Bukkit.getPlayer(m.uuid);
+                        if (t != null) {
+                            t.spigot().sendMessage(out);
+                            t.playSound(t.getLocation(), Sound.ENTITY_EXPERIENCE_ORB_PICKUP, 0.3f, 1.5f);
                         }
-                    });
-                } catch (Exception ex) {
-                    LoggerUtil.error("Fehler im Clan-Chat Listener!", ex);
-                }
-            });
+                    }
+                });
+            } catch (Exception ex) {
+                LoggerUtil.error("Fehler im Clan-Chat Listener!", ex);
+            }
             return;
         }
 
@@ -83,22 +80,17 @@ public final class GlobalChatListener implements Listener {
             return;
         }
 
-        Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
-            try {
-                ClanRepository.ClanCosmeticsRow cos = repo.getCosmetics(prof.clanId);
-
-                String tagStyle = cos.tagStyle.isEmpty() ? "§b" : cos.tagStyle;
-                String suffix = plugin.lang().get("messages.chat.tag_suffix",
-                        "style", tagStyle,
-                        "tag", prof.clanTag);
-
-                String format = plugin.lang().get("messages.chat.global_with_clan_format",
-                        "suffix", suffix);
-                Bukkit.getScheduler().runTask(plugin, () -> e.setFormat(format));
-            } catch (Exception ex) {
-                LoggerUtil.error("Fehler beim Setzen des Chat-Formats!", ex);
-            }
-        });
+        try {
+            ClanRepository.ClanCosmeticsRow cos = repo.getCosmetics(prof.clanId);
+            String suffix = service.formatClanTag(cos.tagStyle, prof.clanTag);
+            String chatSuffix = service.isChatSuffixVisibleInGlobalChat() ? service.formatChatSuffix(cos.chatSuffix) : "";
+            String format = plugin.lang().get("messages.chat.global_with_clan_format",
+                    "suffix", suffix,
+                    "chat_suffix", chatSuffix);
+            e.setFormat(format);
+        } catch (Exception ex) {
+            LoggerUtil.error("Fehler beim Setzen des Chat-Formats!", ex);
+        }
     }
 
     private String roleColor(MemberRole r) {

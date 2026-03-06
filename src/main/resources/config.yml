@@ -57,6 +57,30 @@ clan:
     # Cooldown zwischen zwei Beitrittsanfragen eines Spielers (in Sekunden).
     cooldownSeconds: 20
 
+  # Einstellungen für das Clan-Bank System.
+  bank:
+    # Aktiviert oder deaktiviert den Clan-Tresor komplett.
+    enabled: true
+    # Mindest-Rang zum Auszahlen aus dem Tresor.
+    withdraw:
+      minRole: "OFFICER"
+    # Historie für Einzahlungen, Auszahlungen und Steuern.
+    history:
+      enabled: true
+      # Wie viele Einträge maximal pro Clan gespeichert werden.
+      maxEntriesPerClan: 200
+      # Wie viele Einträge pro GUI-Seite angezeigt werden sollen. Maximal 14.
+      pageSize: 14
+      # Datumsformat für die Historie.
+      timeFormat: "dd.MM.yyyy HH:mm"
+    # Schnellbetraege für die GUI.
+    quickAmounts:
+      deposit: [1000, 5000, 10000, 25000, 50000]
+      withdraw: [1000, 5000, 10000, 25000, 50000]
+      allowCustomInput: true
+      allowDepositAll: true
+      allowWithdrawAll: true
+
   # Einstellungen für das Clan-Home System.
   home:
     # Die Kosten für das Setzen eines neuen Clan-Homes.
@@ -72,6 +96,48 @@ clan:
   tag:
     # Mindest-Rang zum Ändern des Clan-Tags / Styles (LEADER, OFFICER, MEMBER)
     minRoleChange: "OFFICER"
+
+  # Einstellungen für den Chat.
+  chat:
+    suffix:
+      # Aktiviert den extra Clan-Chat-Suffix.
+      enabled: true
+      # Mindest-Rang zum Ändern des Suffix.
+      minRoleChange: "OFFICER"
+      # Maximale sichtbare Zeichenlänge des Suffix.
+      maxVisibleLength: 24
+      # Ob Legacy-Farbcodes (&a, &7, &l) erlaubt sind.
+      allowColorCodes: true
+      # Ob Hex-Farbcodes (&#RRGGBB) erlaubt sind.
+      allowHexColors: true
+      # Ob der Suffix im globalen Chat angezeigt werden soll.
+      showInGlobalChat: true
+      # Ob der Suffix im Clan-Chat angezeigt werden soll.
+      showInClanChat: true
+
+  # Einstellungen für das öffentliche Clan-Profil.
+  profile:
+    enabled: true
+    # Ob Profilseiten direkt über die Bestenliste geöffnet werden koennen.
+    openFromLeaderboard: true
+    # Welche Informationen öffentlich sichtbar sind.
+    showMotd: true
+    showBalance: true
+    showTax: true
+    showCreationDate: true
+    # Format des Erstellungsdatums.
+    dateFormat: "dd.MM.yyyy HH:mm"
+    memberPreview:
+      # Wie viele Mitglieder pro Profil-Seite angezeigt werden. Maximal 14.
+      pageSize: 14
+    # Wie viele online Officers im Profil hervorgehoben werden.
+    officerPreviewLimit: 5
+    recruiting:
+      enabled: true
+
+  # Steuer-Benachrichtigungen.
+  tax:
+    notify: true
 
 # Bestenliste-Einstellungen.
 leaderboard:

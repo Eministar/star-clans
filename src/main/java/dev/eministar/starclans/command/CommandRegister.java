@@ -19,14 +19,15 @@ public final class CommandRegister {
                                 ClanTagStyleMenu tagStyleMenu,
                                 ClanSettingsMenu settingsMenu,
                                 ClanBankMenu bankMenu,
-                                ClanLeaderboardMenu leaderboardMenu) {
+                                ClanLeaderboardMenu leaderboardMenu,
+                                ClanPublicProfileMenu profileMenu) {
 
         PluginCommand clan = plugin.getCommand("clan");
         if (clan == null) {
             throw new IllegalStateException("Command 'clan' not found in plugin.yml");
         }
 
-        clan.setExecutor(new ClanCommand(plugin, service, repo, mainMenu, createMenu, invitesMenu, membersMenu, manageMenu, tagStyleMenu, settingsMenu, bankMenu, leaderboardMenu));
+        clan.setExecutor(new ClanCommand(plugin, service, repo, mainMenu, createMenu, invitesMenu, membersMenu, manageMenu, tagStyleMenu, settingsMenu, bankMenu, leaderboardMenu, profileMenu));
         clan.setTabCompleter(new ClanTabCompleter());
 
         PluginCommand starclans = plugin.getCommand("starclans");

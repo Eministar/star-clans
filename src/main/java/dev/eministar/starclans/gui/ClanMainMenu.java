@@ -103,9 +103,15 @@ public final class ClanMainMenu implements Listener {
                     plugin.lang().getList("gui.main.invites.lore_in_clan", "invites_line", invLine),
                     "INVITES", profile.inviteCount > 0));
 
-            inv.setItem(21, button(Material.CHEST, plugin.lang().get("gui.main.bank.name"),
-                    plugin.lang().getList("gui.main.bank.lore", "balance", service.money(profile.balance)),
-                    "BANK", false));
+            if (service.isBankEnabled()) {
+                inv.setItem(21, button(Material.CHEST, plugin.lang().get("gui.main.bank.name"),
+                        plugin.lang().getList("gui.main.bank.lore", "balance", service.money(profile.balance)),
+                        "BANK", false));
+            } else {
+                inv.setItem(21, button(Material.GRAY_DYE, plugin.lang().get("gui.main.bank.disabled_name"),
+                        plugin.lang().getList("gui.main.bank.disabled_lore"),
+                        "NONE", false));
+            }
 
             inv.setItem(23, button(Material.WHITE_BED, plugin.lang().get("gui.main.home.name"),
                     plugin.lang().getList("gui.main.home.lore", "status",
@@ -113,6 +119,12 @@ public final class ClanMainMenu implements Listener {
                                     ? plugin.lang().get("gui.main.home.not_set")
                                     : plugin.lang().get("gui.main.home.set")),
                     "HOME", false));
+
+            if (service.isProfileEnabled()) {
+                inv.setItem(32, button(Material.BOOK, plugin.lang().get("gui.main.profile.name"),
+                        plugin.lang().getList("gui.main.profile.lore"),
+                        "PROFILE", true));
+            }
 
             inv.setItem(10, button(Material.GOLD_BLOCK, plugin.lang().get("gui.main.leaderboard.name"),
                     plugin.lang().getList("gui.main.leaderboard.lore"),
@@ -186,6 +198,12 @@ public final class ClanMainMenu implements Listener {
         if (action.equals("LEADERBOARD")) {
             p.closeInventory();
             p.performCommand("clan leaderboard");
+            return;
+        }
+
+        if (action.equals("PROFILE")) {
+            p.closeInventory();
+            p.performCommand("clan profile");
             return;
         }
 

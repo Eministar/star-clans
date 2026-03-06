@@ -1,4 +1,4 @@
-StarClans - Commands & Placeholders (v1.1.0)
+StarClans - Commands & Placeholders (v1.2.0)
 ========================================
 
 Commands (from plugin.yml / command classes)
@@ -42,13 +42,19 @@ Commands (from plugin.yml / command classes)
 /clan chat
   - Schaltet den Clan-Chat um
 
+/clan profile [clan|player]
+  - Öffnet das öffentliche Clan-Profil
+
+/clan chatsuffix <text|clear>
+  - Setzt oder entfernt den Clan-Chat-Suffix
+
 /clan bank
   - Öffnet das Bank-Menü des Clans
 
-/clan deposit <betrag>
+/clan deposit <betrag|all>
   - Zahlt Geld in die Clan-Bank ein
 
-/clan withdraw <betrag>
+/clan withdraw <betrag|all>
   - Hebt Geld von der Clan-Bank ab
 
 /clan tax <prozentsatz>
@@ -138,28 +144,37 @@ Identifier: starclans
   - Wie %starclans_suffix%, aber mit führendem Leerzeichen, falls nicht leer
 
 
-Features (Neu in v1.1.0)
+Features (Neu in v1.2.0)
 ------------------------
 1. Clan-Ökonomie (Vault-Integration)
    - Gemeinsames Bankkonto für jeden Clan.
    - Ein- und Auszahlungen für autorisierte Rollen.
+   - Schnellbeträge, Freitext-Eingabe und all-Buttons im GUI.
+   - Persistente Bank-Historie für Einzahlungen, Auszahlungen und Steuern.
    - Automatisches Steuersystem: Ein konfigurierbarer Prozentsatz der Einnahmen
      fließt direkt in die Clan-Bank.
 
-2. Clan-Infrastruktur
+2. Öffentliches Clan-Profil & Recruiting
+   - Öffentliche Clan-Profile mit Klick-Integration aus der Bestenliste.
+   - Recruit­ing direkt über das Profil mit Anbindung an das vorhandene Join-System.
+   - Konfigurierbare Sichtbarkeit für MOTD, Balance, Steuer und Erstellungsdatum.
+
+3. Clan-Infrastruktur
    - Home-System: Clans können einen gemeinsamen Teleportpunkt setzen.
    - Kosten und Berechtigungen für /clan home sind in der config.yml einstellbar.
 
-3. Leaderboards
+4. Leaderboards
    - Ein grafisches Interface (/clan top), um die stärksten Clans basierend auf
      Bankguthaben oder Mitgliederanzahl zu vergleichen.
+   - Direkter Sprung in öffentliche Clan-Profile per Klick.
 
-4. Erweitertes Rollensystem (RBAC)
+5. Erweitertes Rollensystem (RBAC)
    - Feingranulare Berechtigungen: Bestimme in der config.yml, ab welchem Rang
      Mitglieder den Home-Punkt setzen, sich teleportieren oder den Clan-Tag
      ändern dürfen.
+   - Konfigurierbare Rechte für Chat-Suffix und Bank-Auszahlungen.
 
-5. Professionelles Design & Logging
+6. Professionelles Design & Logging
    - Alle Nachrichten und GUIs folgen einem einheitlichen "Star"-Design.
    - Fehlerfreies Encoding für Umlaute und Sonderzeichen.
    - Automatisches Logging von Fehlern in den /logs Ordner zur besseren Wartbarkeit.

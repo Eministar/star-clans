@@ -81,6 +81,22 @@ public final class SQL {
                                 chat_suffix VARCHAR(64) NOT NULL DEFAULT ''
                             ) ENGINE=InnoDB DEFAULT CHARSET=%s COLLATE=%s
                         """.formatted(CHARSET, COLLATE));
+
+                st.execute("""
+                            CREATE TABLE IF NOT EXISTS clan_bank_history (
+                                id BIGINT AUTO_INCREMENT PRIMARY KEY,
+                                clan_id BIGINT NOT NULL,
+                                actor_uuid CHAR(36) DEFAULT NULL,
+                                actor_name VARCHAR(16) NOT NULL DEFAULT '',
+                                type VARCHAR(24) NOT NULL,
+                                amount DOUBLE NOT NULL DEFAULT 0.0,
+                                balance_after DOUBLE NOT NULL DEFAULT 0.0,
+                                note VARCHAR(128) NOT NULL DEFAULT '',
+                                created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                                KEY idx_bank_history_clan (clan_id),
+                                KEY idx_bank_history_created (created_at)
+                            ) ENGINE=InnoDB DEFAULT CHARSET=%s COLLATE=%s
+                        """.formatted(CHARSET, COLLATE));
             }
         }
 
@@ -111,6 +127,13 @@ public final class SQL {
         requireColumn(ds, "clan_cosmetics", "clan_id");
         requireColumn(ds, "clan_cosmetics", "tag_style");
         requireColumn(ds, "clan_cosmetics", "chat_suffix");
+
+        requireColumn(ds, "clan_bank_history", "id");
+        requireColumn(ds, "clan_bank_history", "clan_id");
+        requireColumn(ds, "clan_bank_history", "type");
+        requireColumn(ds, "clan_bank_history", "amount");
+        requireColumn(ds, "clan_bank_history", "balance_after");
+        requireColumn(ds, "clan_bank_history", "created_at");
     }
 
     private static void ensureUpToDate(DataSource ds) throws Exception {
@@ -142,6 +165,16 @@ public final class SQL {
 
             ensureColumn(con, "clan_cosmetics", "tag_style", "VARCHAR(64) NOT NULL DEFAULT ''");
             ensureColumn(con, "clan_cosmetics", "chat_suffix", "VARCHAR(64) NOT NULL DEFAULT ''");
+
+            ensureColumn(con, "clan_bank_history", "actor_uuid", "CHAR(36) DEFAULT NULL");
+            ensureColumn(con, "clan_bank_history", "actor_name", "VARCHAR(16) NOT NULL DEFAULT ''");
+            ensureColumn(con, "clan_bank_history", "type", "VARCHAR(24) NOT NULL");
+            ensureColumn(con, "clan_bank_history", "amount", "DOUBLE NOT NULL DEFAULT 0.0");
+            ensureColumn(con, "clan_bank_history", "balance_after", "DOUBLE NOT NULL DEFAULT 0.0");
+            ensureColumn(con, "clan_bank_history", "note", "VARCHAR(128) NOT NULL DEFAULT ''");
+            ensureColumn(con, "clan_bank_history", "created_at", "TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP");
+            ensureIndex(con, "clan_bank_history", "idx_bank_history_clan", "clan_id");
+            ensureIndex(con, "clan_bank_history", "idx_bank_history_created", "created_at");
         }
     }
 

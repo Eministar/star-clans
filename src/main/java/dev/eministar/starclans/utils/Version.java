@@ -3,7 +3,7 @@ package dev.eministar.starclans.utils;
 import org.bukkit.plugin.java.JavaPlugin;
 
 public final class Version {
-    private static final String VERSION = "1.1.0";
+    private static final String VERSION = "2.0.0";
 
     private Version() {
     }

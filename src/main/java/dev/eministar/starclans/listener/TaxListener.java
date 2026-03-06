@@ -77,6 +77,7 @@ public final class TaxListener implements Listener {
         Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
             try {
                 plugin.repo().deposit(profile.clanId, taxAmount);
+                service.recordTaxPayment(p.getUniqueId(), p.getName(), profile.clanId, taxAmount, profile.balance + taxAmount);
             } catch (Exception ignored) {
             }
         });

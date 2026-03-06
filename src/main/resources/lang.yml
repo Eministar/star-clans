@@ -2,8 +2,8 @@
 # |                                                                                              |
 # |                                       StarClans Language                                     |
 # |                                                                                              |
-# |   Farbcodes: Nutze & (z.B. &a, &7, &l) oder Hex-Farben (&#RRGGBB).                            |
-# |   Platzhalter: {name}, {tag}, {player}, {count}, {cost}, {role}, {seconds}, {min}, {max}         |
+# |   Farbcodes: Nutze & (z.B. &a, &7, &l) oder Hex-Farben (&#RRGGBB).                           |
+# |   Platzhalter: {name}, {tag}, {player}, {count}, {cost}, {role}, {seconds}, {min}, {max}     |
 # |                                                                                              |
 # +----------------------------------------------------------------------------------------------+
 
@@ -74,6 +74,8 @@ messages:
       - "&8• &f/clan accept <ID> &7- Einladung annehmen"
       - "&8• &f/clan deny <ID> &7- Einladung ablehnen"
       - "&8• &f/clan members &7- Zeigt die Mitgliederliste"
+      - "&8• &f/clan profile [Clan|Spieler] &7- Öffentliches Clan-Profil"
+      - "&8• &f/clan chatsuffix <Text|clear> &7- Clan-Chat-Suffix setzen"
       - "&8• &f/clan chat &7- Clan-Chat umschalten"
       - "&8• &f/clan leave &7- Clan verlassen"
       - "&8&m----------------------------------------"
@@ -111,9 +113,18 @@ messages:
     not_enough_money: "Du hast nicht genug Geld. Benötigt: &6{amount}"
     clan_not_enough_money: "Der Clan-Tresor hat nicht genug Geld. Verfügbar: &6{balance}"
     deposit_success: "Du hast &a{amount} &7in den Clan-Tresor eingezahlt."
-    deposit_usage: "Nutze: &f/clan deposit <Betrag>"
+    deposit_usage: "Nutze: &f/clan deposit <Betrag|all>"
     withdraw_success: "Du hast &c{amount} &7aus dem Clan-Tresor abgehoben."
-    withdraw_usage: "Nutze: &f/clan withdraw <Betrag>"
+    withdraw_usage: "Nutze: &f/clan withdraw <Betrag|all>"
+    disabled: "Der Clan-Tresor ist in der Konfiguration deaktiviert."
+    vault_missing: "Es wurde kein Economy-System gefunden."
+    all_disabled: "Die 'all'-Funktion ist in der Konfiguration deaktiviert."
+    custom_disabled: "Die freie Betragseingabe ist in der Konfiguration deaktiviert."
+    nothing_to_deposit: "Du hast aktuell kein Geld zum Einzahlen."
+    nothing_to_withdraw: "Im Clan-Tresor ist aktuell nichts zum Auszahlen."
+    deposit_prompt: "Schreibe den Betrag für die Einzahlung in den Chat. &8('all' oder 'cancel')"
+    withdraw_prompt: "Schreibe den Betrag für die Auszahlung in den Chat. &8('all' oder 'cancel')"
+    input_cancelled: "Bank-Eingabe abgebrochen."
     fail: "Transaktion fehlgeschlagen."
 
   # Home-System
@@ -213,9 +224,20 @@ messages:
     fail: "Fehler beim Speichern des Styles."
 
   chat_suffix:
-    saved: "Dein persönlicher Clan-Chat Suffix wurde gespeichert."
-    removed: "Dein Suffix wurde entfernt."
+    saved: "Der Clan-Chat-Suffix wurde gespeichert."
+    removed: "Der Clan-Chat-Suffix wurde entfernt."
+    changed_broadcast: "Der Clan-Chat-Suffix wurde von &f{player} &7geändert."
+    disabled: "Der Clan-Chat-Suffix ist deaktiviert."
+    prompt: "Schreibe den neuen Clan-Chat-Suffix in den Chat. &8(Nutze 'cancel' zum Abbrechen)"
+    cancelled: "Suffix-Eingabe abgebrochen."
+    usage: "Nutze: &f/clan chatsuffix <Text|clear>"
+    too_long: "Der Suffix darf maximal &f{max} &7sichtbare Zeichen haben."
     fail: "Fehler beim Speichern des Suffix."
+
+  profile:
+    disabled: "Öffentliche Clan-Profile sind deaktiviert."
+    not_found: "Kein Clan-Profil für diese Eingabe gefunden."
+    usage: "Nutze: &f/clan profile <Clan|Spieler> &7oder ohne Argumente für deinen Clan."
 
   # Beförderung/Degradierung
   promote:
@@ -262,11 +284,12 @@ messages:
 
   chat:
     tag_suffix: " &8[&r{style}{tag}&8]&r"
+    chat_suffix_format: " &8<&f{suffix}&8>"
     hover: "&7Rang: {role_color}{role}"
     clan_prefix: "&d&lC &8| &f"
     clan_message_tail: " &8» &d{message}"
     global_no_clan_format: "&7%1$s &8» &7%2$s"
-    global_with_clan_format: "&f%1$s{suffix} &8» &7%2$s"
+    global_with_clan_format: "&f%1$s{suffix}{chat_suffix} &8» &7%2$s"
 
   # Update-Checker
   update:
@@ -343,6 +366,17 @@ gui:
       lore:
         - "&7Verwalte das Geld deines Clans."
         - "&7Guthaben: &f{balance}"
+        - ""
+        - "&eKlicke zum Öffnen"
+      disabled_name: "&7&lClan-Tresor"
+      disabled_lore:
+        - "&7Der Clan-Tresor ist aktuell"
+        - "&7in der Konfiguration deaktiviert."
+    profile:
+      name: "&b&lClan-Profil"
+      lore:
+        - "&7Öffne das öffentliche Profil"
+        - "&7deines Clans mit Recruiting-Ansicht."
         - ""
         - "&eKlicke zum Öffnen"
     home:
@@ -517,6 +551,22 @@ gui:
         - "&7Aktuell: &f{rate}%"
         - ""
         - "&eKlicke zum Ändern"
+    chat_suffix:
+      name: "&d&lChat-Suffix"
+      none: "&8(Kein Suffix gesetzt)"
+      lore:
+        - "&8&m--------------------"
+        - "&7Aktueller Suffix:"
+        - "&f{suffix}"
+        - "&8&m--------------------"
+        - "&eKlicke zum Ändern"
+    profile:
+      name: "&b&lÖffentliches Profil"
+      lore:
+        - "&7So sehen andere Spieler"
+        - "&7deinen Clan im Recruiting."
+        - ""
+        - "&eKlicke zum Öffnen"
     disband:
       name: "&c&lCLAN AUFLÖSEN"
       lore:
@@ -585,28 +635,88 @@ gui:
 
   bank:
     title: "&6&lClan-Tresor"
-    deposit:
-      name: "&a&lEinzahlen"
-      lore:
-        - "&7Zahle Geld in den Tresor ein,"
-        - "&7um Clan-Aktionen zu finanzieren."
-        - ""
-        - "&eKlicke zum Einzahlen"
-    withdraw:
-      name: "&c&lAbheben"
-      lore:
-        - "&7Hebe Geld aus dem Tresor ab."
-        - "&8(Nur für Officer & Leader)"
-        - ""
-        - "&eKlicke zum Abheben"
     info:
       name: "&e&lInformation"
       lore:
         - "&7Aktuelles Guthaben:"
         - "&f{balance}"
         - ""
-        - "&8Geld im Tresor kann für"
-        - "&8Upgrades oder Steuern genutzt werden."
+        - "&7Historien-Einträge: &f{entries}"
+        - "&7Seite: &f{page}&7/&f{max}"
+    locked:
+      name: "&7&lGesperrt"
+      lore:
+        - "&7Diese Aktion ist für deinen"
+        - "&7aktuellen Rang oder die Config gesperrt."
+    quick_amount:
+      name: "&e&l{amount}"
+      lore:
+        - "&7Führe diese Tresor-Transaktion"
+        - "&7direkt mit einem Klick aus."
+        - ""
+        - "&eKlicke zum Ausführen"
+    deposit_custom:
+      name: "&a&lFreier Einzahl-Betrag"
+      lore:
+        - "&7Schreibe einen individuellen"
+        - "&7Betrag in den Chat."
+        - ""
+        - "&eKlicke zur Eingabe"
+    deposit_all:
+      name: "&a&lAlles Einzahlen"
+      lore:
+        - "&7Zahlt dein gesamtes Geld"
+        - "&7in den Clan-Tresor ein."
+        - ""
+        - "&eKlicke zum Ausführen"
+    withdraw_custom:
+      name: "&c&lFreier Auszahl-Betrag"
+      lore:
+        - "&7Schreibe einen individuellen"
+        - "&7Auszahl-Betrag in den Chat."
+        - ""
+        - "&eKlicke zur Eingabe"
+    withdraw_all:
+      name: "&c&lAlles Auszahlen"
+      lore:
+        - "&7Zahlt das gesamte Guthaben"
+        - "&7aus dem Clan-Tresor aus."
+        - ""
+        - "&eKlicke zum Ausführen"
+    prev:
+      name: "&7« Vorherige Historie"
+      lore:
+        - "&7Zur vorherigen Bank-Seite."
+    next:
+      name: "&7Nächste Historie »"
+      lore:
+        - "&7Zur nächsten Bank-Seite."
+    refresh:
+      name: "&e&lAktualisieren"
+      lore:
+        - "&7Laedt Guthaben und Historie"
+        - "&7neu aus der Datenbank."
+    page:
+      name: "&e&lHistorie"
+      lore:
+        - "&7Seite: &f{page}&7/&f{max}"
+    history_empty:
+      name: "&7&lKeine Historie"
+      lore:
+        - "&7Für diesen Clan wurden bisher"
+        - "&7noch keine Bank-Ereignisse gespeichert."
+    history_entry:
+      name: "&f{type} &8• &e{amount}"
+      no_note: "&8(Keine Notiz)"
+      lore:
+        - "&7Spieler: &f{actor}"
+        - "&7Kontostand danach: &f{balance}"
+        - "&7Zeitpunkt: &f{date}"
+        - "&7Notiz: &f{note}"
+    history_types:
+      deposit: "&aEinzahlung"
+      withdraw: "&cAuszahlung"
+      tax: "&6Steuer"
 
   leaderboard:
     title: "&e&lClan-Bestenliste"
@@ -624,6 +734,97 @@ gui:
         - "&8Mitglieder: &f{members}"
         - ""
         - "&ePosition im globalen Vergleich"
+      profile_lore:
+        - ""
+        - "&bKlick &7für das öffentliche Clan-Profil"
+
+  profile:
+    title: "&b&lClan-Profil"
+    glass: "&8 "
+    back:
+      name: "&c&lZurück"
+      lore:
+        - "&7Zum vorherigen Menü."
+    prev:
+      name: "&7« Vorherige Seite"
+      lore:
+        - "&7Zeigt frühere Clan-Mitglieder an."
+    next:
+      name: "&7Nächste Seite »"
+      lore:
+        - "&7Zeigt weitere Clan-Mitglieder an."
+    manage:
+      name: "&b&lEigene Verwaltung"
+      lore:
+        - "&7Springe direkt in die Clan-Verwaltung."
+        - ""
+        - "&eKlicke zum Öffnen"
+    page:
+      name: "&e&lMitglieder"
+      lore:
+        - "&7Seite: &f{page}&7/&f{max}"
+    header:
+      name: "&b&l{clan} &8[&f{tag}&8]"
+      lore:
+        - "&7Leader: &f{leader}"
+        - "&7Mitglieder: &f{members}"
+      created: "&7Erstellt: &f{date}"
+    stats:
+      name: "&e&lClan-Daten"
+      lore:
+        - "&7Leader: &f{leader}"
+        - "&7Mitglieder: &f{members}"
+    recruiting:
+      name: "&a&lRecruiting"
+      open: "&aOffen"
+      closed: "&cGeschlossen"
+      same_clan: "&7Das ist dein eigener Clan."
+      default_state: "&7Bewerbungen laufen über dieses Profil."
+      lore:
+        - "&7Status: {status}"
+        - "{state}"
+    cosmetics:
+      name: "&d&lClan-Design"
+      none: "&8(Kein Wert gesetzt)"
+      lore:
+        - "&7Tag-Vorschau: &f{tag_preview}"
+        - "&7Chat-Suffix: &f{chat_suffix}"
+    officers:
+      name: "&b&lOffiziere online"
+      none: "&7Keine"
+      lore:
+        - "&7Leader: &f{leader}"
+        - "&7Online: &f{count}"
+        - "&7Namen: &f{officers}"
+    motd:
+      name: "&e&lClan-MOTD"
+      none: "&8(Keine MOTD gesetzt)"
+      lore:
+        - "&7{motd}"
+    balance:
+      name: "&6&lClan-Tresor"
+      lore:
+        - "&7Öffentliches Guthaben:"
+        - "&f{balance}"
+    tax:
+      name: "&6&lSteuersatz"
+      lore:
+        - "&7Aktuell: &f{rate}%"
+    apply:
+      name: "&a&lBewerben"
+      open: "&aBewerbung möglich"
+      closed: "&cRecruiting geschlossen"
+      lore:
+        - "&7Status: {status}"
+        - ""
+        - "&eKlicke für eine Bewerbung"
+    member:
+      name: "&f{name}"
+      online: "&aOnline"
+      offline: "&7Offline"
+      lore:
+        - "&7Rang: {role_color}{role}"
+        - "&7Status: {status}"
 
   generic:
     back:

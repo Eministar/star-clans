@@ -15,7 +15,7 @@ public final class ClanTabCompleter implements TabCompleter {
     private static final List<String> ROOT = Arrays.asList(
             "create", "invites", "members", "manage", "settings", "tagstyler", "tagstyle", "styler",
             "invite", "join", "accept", "deny", "chat", "leave", "disband", "kick", "promote", "demote", "transfer",
-            "bank", "deposit", "withdraw", "home", "sethome", "leaderboard", "top", "tax"
+            "bank", "deposit", "withdraw", "home", "sethome", "leaderboard", "top", "tax", "profile", "chatsuffix", "suffix"
     );
 
     @Override
@@ -30,6 +30,17 @@ public final class ClanTabCompleter implements TabCompleter {
                 List<String> names = new ArrayList<>();
                 for (Player p : Bukkit.getOnlinePlayers()) names.add(p.getName());
                 return filter(names, args[1]);
+            }
+            if (sub.equals("deposit") || sub.equals("withdraw")) {
+                return filter(List.of("all"), args[1]);
+            }
+            if (sub.equals("profile")) {
+                List<String> names = new ArrayList<>();
+                for (Player p : Bukkit.getOnlinePlayers()) names.add(p.getName());
+                return filter(names, args[1]);
+            }
+            if (sub.equals("chatsuffix") || sub.equals("suffix")) {
+                return filter(List.of("clear"), args[1]);
             }
         }
 

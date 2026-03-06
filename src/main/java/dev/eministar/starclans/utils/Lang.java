@@ -12,8 +12,12 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public final class Lang {
+
+    private static final Pattern HEX_PATTERN = Pattern.compile("(?i)&\\#([0-9A-F]{6})");
 
     private final JavaPlugin plugin;
     private File file;
@@ -102,7 +106,7 @@ public final class Lang {
 
     public String prefixedRaw(String message) {
         ensureLatest();
-        return prefix() + color(message);
+        return prefix() + colorize(message);
     }
 
     public String role(MemberRole role) {
@@ -134,10 +138,30 @@ public final class Lang {
     }
 
     private String color(String s) {
+        return colorize(s);
+    }
+
+    public String colorize(String s) {
         if (s == null) {
             return "";
         }
-        return ChatColor.translateAlternateColorCodes('&', s);
+        String withHex = applyHexColors(s);
+        return ChatColor.translateAlternateColorCodes('&', withHex);
+    }
+
+    private String applyHexColors(String s) {
+        Matcher matcher = HEX_PATTERN.matcher(s);
+        StringBuffer out = new StringBuffer();
+        while (matcher.find()) {
+            String hex = matcher.group(1).toUpperCase(Locale.ROOT);
+            StringBuilder replacement = new StringBuilder("§x");
+            for (char c : hex.toCharArray()) {
+                replacement.append('§').append(c);
+            }
+            matcher.appendReplacement(out, Matcher.quoteReplacement(replacement.toString()));
+        }
+        matcher.appendTail(out);
+        return out.toString();
     }
 
     private void ensureLatest() {

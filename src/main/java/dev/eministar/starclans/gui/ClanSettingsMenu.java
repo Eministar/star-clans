@@ -28,16 +28,19 @@ public final class ClanSettingsMenu implements Listener {
     private final ClanService service;
     private final ClanRepository repo;
     private final ClanMainMenu mainMenu;
+    private final ClanPublicProfileMenu profileMenu;
 
     private final Set<UUID> motdEdit = ConcurrentHashMap.newKeySet();
     private final Set<UUID> taxEdit = ConcurrentHashMap.newKeySet();
+    private final Set<UUID> chatSuffixEdit = ConcurrentHashMap.newKeySet();
     private String title;
 
-    public ClanSettingsMenu(StarClans plugin, ClanService service, ClanRepository repo, ClanMainMenu mainMenu) {
+    public ClanSettingsMenu(StarClans plugin, ClanService service, ClanRepository repo, ClanMainMenu mainMenu, ClanPublicProfileMenu profileMenu) {
         this.plugin = plugin;
         this.service = service;
         this.repo = repo;
         this.mainMenu = mainMenu;
+        this.profileMenu = profileMenu;
         this.title = plugin.lang().get("gui.settings.title");
     }
 
@@ -55,7 +58,9 @@ public final class ClanSettingsMenu implements Listener {
                     return;
                 }
                 ClanRepository.ClanSettingsRow s = repo.getSettings(clanId);
-                Bukkit.getScheduler().runTask(plugin, () -> openInv(p, role, s));
+                ClanRepository.ClanCosmeticsRow cos = repo.getCosmetics(clanId);
+                long finalClanId = clanId;
+                Bukkit.getScheduler().runTask(plugin, () -> openInv(p, finalClanId, role, s, cos));
             } catch (Exception e) {
                 LoggerUtil.error("Fehler im ClanSettingsMenu für " + p.getName(), e);
                 Bukkit.getScheduler().runTask(plugin, () -> p.sendMessage(plugin.lang().error("messages.error_console")));
@@ -63,13 +68,13 @@ public final class ClanSettingsMenu implements Listener {
         });
     }
 
-    private void openInv(Player p, MemberRole role, ClanRepository.ClanSettingsRow s) {
+    private void openInv(Player p, long clanId, MemberRole role, ClanRepository.ClanSettingsRow s, ClanRepository.ClanCosmeticsRow cos) {
         this.title = plugin.lang().get("gui.settings.title");
-        Inventory inv = Bukkit.createInventory(null, 45, title);
+        Inventory inv = Bukkit.createInventory(null, 54, title);
 
-        for (int i = 0; i < 45; i++) inv.setItem(i, glass());
+        for (int i = 0; i < 54; i++) inv.setItem(i, glass());
 
-        inv.setItem(40, back());
+        inv.setItem(49, back());
 
         boolean can = role != MemberRole.MEMBER;
 
@@ -81,6 +86,8 @@ public final class ClanSettingsMenu implements Listener {
         inv.setItem(23, members());
         inv.setItem(25, can ? tax(s.taxRate) : locked(plugin.lang().get("gui.settings.locked")));
         inv.setItem(31, invites());
+        inv.setItem(29, can && service.isChatSuffixEnabled() ? chatSuffix(cos.chatSuffix) : locked(plugin.lang().get("gui.settings.locked")));
+        inv.setItem(33, service.isProfileEnabled() ? profileButton() : locked(plugin.lang().get("gui.settings.locked")));
 
         p.openInventory(inv);
         p.playSound(p.getLocation(), Sound.UI_BUTTON_CLICK, 0.7f, 1.4f);
@@ -93,11 +100,11 @@ public final class ClanSettingsMenu implements Listener {
 
         e.setCancelled(true);
 
-        if (e.getRawSlot() < 0 || e.getRawSlot() >= 45) return;
+        if (e.getRawSlot() < 0 || e.getRawSlot() >= 54) return;
 
         int slot = e.getRawSlot();
 
-        if (slot == 40) {
+        if (slot == 49) {
             mainMenu.open(p);
             p.playSound(p.getLocation(), Sound.UI_BUTTON_CLICK, 0.8f, 1.6f);
             return;
@@ -148,6 +155,35 @@ public final class ClanSettingsMenu implements Listener {
             return;
         }
 
+        if (slot == 29) {
+            if (!service.isChatSuffixEnabled()) {
+                p.sendMessage(plugin.lang().prefixed("messages.chat_suffix.disabled"));
+                return;
+            }
+            chatSuffixEdit.add(p.getUniqueId());
+            p.closeInventory();
+            p.sendMessage(plugin.lang().prefixed("messages.chat_suffix.prompt"));
+            p.playSound(p.getLocation(), Sound.UI_BUTTON_CLICK, 0.8f, 1.6f);
+            return;
+        }
+
+        if (slot == 33) {
+            if (!service.isProfileEnabled()) {
+                p.sendMessage(plugin.lang().prefixed("messages.profile.disabled"));
+                return;
+            }
+            p.closeInventory();
+            service.loadProfileAsync(p.getUniqueId(), profile -> {
+                if (profile == null || !profile.inClan) {
+                    p.sendMessage(plugin.lang().prefixed("messages.not_in_clan"));
+                    return;
+                }
+                profileMenu.openFromMain(p, profile.clanId);
+            });
+            p.playSound(p.getLocation(), Sound.UI_BUTTON_CLICK, 0.8f, 1.6f);
+            return;
+        }
+
         if (slot == 25) {
             taxEdit.add(p.getUniqueId());
             p.closeInventory();
@@ -175,6 +211,26 @@ public final class ClanSettingsMenu implements Listener {
             }
 
             service.setMotd(p, msg, s -> {
+                p.sendMessage(plugin.lang().prefixedRaw(s));
+                open(p);
+            });
+            return;
+        }
+
+        if (chatSuffixEdit.contains(u)) {
+            e.setCancelled(true);
+            chatSuffixEdit.remove(u);
+
+            String msg = e.getMessage();
+            if (msg.equalsIgnoreCase("cancel")) {
+                Bukkit.getScheduler().runTask(plugin, () -> {
+                    p.sendMessage(plugin.lang().prefixed("messages.chat_suffix.cancelled"));
+                    open(p);
+                });
+                return;
+            }
+
+            service.setChatSuffix(p, msg, s -> {
                 p.sendMessage(plugin.lang().prefixedRaw(s));
                 open(p);
             });
@@ -213,6 +269,7 @@ public final class ClanSettingsMenu implements Listener {
     public void onQuit(PlayerQuitEvent e) {
         motdEdit.remove(e.getPlayer().getUniqueId());
         taxEdit.remove(e.getPlayer().getUniqueId());
+        chatSuffixEdit.remove(e.getPlayer().getUniqueId());
     }
 
     private ItemStack motd(String motd) {
@@ -298,6 +355,31 @@ public final class ClanSettingsMenu implements Listener {
         if (meta != null) {
             meta.setDisplayName(plugin.lang().get("gui.settings.tax.name"));
             meta.setLore(plugin.lang().getList("gui.settings.tax.lore", "rate", Double.valueOf(rate)));
+            it.setItemMeta(meta);
+        }
+        return it;
+    }
+
+    private ItemStack chatSuffix(String suffix) {
+        ItemStack it = new ItemStack(Material.OAK_SIGN);
+        ItemMeta meta = it.getItemMeta();
+        if (meta != null) {
+            meta.setDisplayName(plugin.lang().get("gui.settings.chat_suffix.name"));
+            String preview = suffix == null || suffix.isBlank()
+                    ? plugin.lang().get("gui.settings.chat_suffix.none")
+                    : service.formatChatSuffix(suffix);
+            meta.setLore(plugin.lang().getList("gui.settings.chat_suffix.lore", "suffix", preview));
+            it.setItemMeta(meta);
+        }
+        return it;
+    }
+
+    private ItemStack profileButton() {
+        ItemStack it = new ItemStack(Material.BOOK);
+        ItemMeta meta = it.getItemMeta();
+        if (meta != null) {
+            meta.setDisplayName(plugin.lang().get("gui.settings.profile.name"));
+            meta.setLore(plugin.lang().getList("gui.settings.profile.lore"));
             it.setItemMeta(meta);
         }
         return it;

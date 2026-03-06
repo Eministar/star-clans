@@ -23,9 +23,11 @@ GUI-first clans, smart invites, tag styling, clan chat, and PlaceholderAPI suppo
 ## ✨ Highlights
 - **Polished GUIs** for creation, management, invites, members, and settings
 - **Clan chat** toggle for focused team comms
-- **Tag & suffix styling** for identity and rank flair
+- **Tag & chat-suffix styling** for identity and rank flair
 - **Leader transfer** for safe ownership handover
 - **Open-Invite join requests** via command flow
+- **Public clan profiles** with recruiting flow and leaderboard integration
+- **Clan bank history** with quick-amount GUI actions
 - **PlaceholderAPI** expansion for scoreboard/tab/list integrations
 - **Vault-ready** for economy features
 - **Discord webhook** for important clan events
@@ -59,6 +61,8 @@ GUI-first clans, smart invites, tag styling, clan chat, and PlaceholderAPI suppo
 /clan tagstyler            - Open tag/suffix styling
 /clan tagstyle             - Alias for tagstyler
 /clan styler               - Alias for tagstyler
+/clan profile [clan|player] - Open a public clan profile
+/clan chatsuffix <text>    - Set clan chat suffix
 /clan chat                 - Toggle clan chat
 /clan kick <player>        - Kick a member
 /clan promote <player>     - Promote a member
@@ -66,6 +70,8 @@ GUI-first clans, smart invites, tag styling, clan chat, and PlaceholderAPI suppo
 /clan transfer <player>    - Transfer leadership
 /clan leave                - Leave clan
 /clan disband              - Disband clan (leader only)
+/clan deposit <amount|all> - Deposit money into clan bank
+/clan withdraw <amount|all> - Withdraw money from clan bank
 
 /starclans reload          - Reload config/Vault/DB
 ```
@@ -104,6 +110,37 @@ database:
     connectionTimeoutMs: 10000
     idleTimeoutMs: 600000
     maxLifetimeMs: 1800000
+
+clan:
+  bank:
+    enabled: true
+    history:
+      enabled: true
+      maxEntriesPerClan: 200
+      pageSize: 14
+    quickAmounts:
+      deposit: [1000, 5000, 10000, 25000, 50000]
+      withdraw: [1000, 5000, 10000, 25000, 50000]
+      allowCustomInput: true
+      allowDepositAll: true
+      allowWithdrawAll: true
+  chat:
+    suffix:
+      enabled: true
+      minRoleChange: "OFFICER"
+      maxVisibleLength: 24
+      allowColorCodes: true
+      allowHexColors: true
+      showInGlobalChat: true
+      showInClanChat: true
+  profile:
+    enabled: true
+    openFromLeaderboard: true
+    showMotd: true
+    showBalance: true
+    showTax: true
+    showCreationDate: true
+    dateFormat: "dd.MM.yyyy HH:mm"
 ```
 
 ## 🛠️ Build
