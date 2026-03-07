@@ -2,59 +2,66 @@
   <title id="title">StarClans banner</title>
   <desc id="desc">Banner artwork for the StarClans plugin README.</desc>
   <defs>
-    <linearGradient id="bg" x1="80" y1="40" x2="1120" y2="380" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#0F172A"/>
-      <stop offset="0.5" stop-color="#111C3B"/>
-      <stop offset="1" stop-color="#18284D"/>
+    <linearGradient id="bg" x1="56" y1="24" x2="1132" y2="394" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#0B1630"/>
+      <stop offset="0.52" stop-color="#102046"/>
+      <stop offset="1" stop-color="#162B54"/>
     </linearGradient>
-    <linearGradient id="accent" x1="120" y1="90" x2="1040" y2="330" gradientUnits="userSpaceOnUse">
+    <linearGradient id="goldBlue" x1="88" y1="66" x2="1016" y2="350" gradientUnits="userSpaceOnUse">
       <stop stop-color="#FACC15"/>
       <stop offset="1" stop-color="#38BDF8"/>
     </linearGradient>
-    <linearGradient id="chip" x1="0" y1="0" x2="160" y2="44" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#132444"/>
-      <stop offset="1" stop-color="#0F1B32"/>
+    <linearGradient id="panel" x1="846" y1="72" x2="1142" y2="330" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#0B1734"/>
+      <stop offset="1" stop-color="#0F1D3A"/>
+    </linearGradient>
+    <linearGradient id="chip" x1="0" y1="0" x2="188" y2="44" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#122548"/>
+      <stop offset="1" stop-color="#0D1A35"/>
     </linearGradient>
   </defs>
 
   <rect x="16" y="16" width="1168" height="388" rx="28" fill="url(#bg)"/>
-  <rect x="16" y="16" width="1168" height="388" rx="28" stroke="#FACC15" stroke-opacity="0.28"/>
+  <rect x="16" y="16" width="1168" height="388" rx="28" stroke="#FACC15" stroke-opacity="0.20"/>
 
-  <circle cx="1038" cy="112" r="118" fill="#38BDF8" opacity="0.08"/>
-  <circle cx="952" cy="316" r="162" fill="#FACC15" opacity="0.07"/>
-  <circle cx="146" cy="94" r="44" fill="#FACC15" opacity="0.10"/>
+  <circle cx="1030" cy="90" r="96" fill="#38BDF8" opacity="0.10"/>
+  <circle cx="1054" cy="308" r="124" fill="#FACC15" opacity="0.08"/>
+  <circle cx="196" cy="70" r="36" fill="#FACC15" opacity="0.12"/>
 
-  <path d="M154 82L175.8 129.2L227.5 135.2L189.2 171.5L199.4 222.8L154 197.3L108.6 222.8L118.8 171.5L80.5 135.2L132.2 129.2L154 82Z" fill="url(#accent)"/>
-  <path d="M205 250H338" stroke="#FACC15" stroke-width="6" stroke-linecap="round" opacity="0.9"/>
-  <path d="M205 276H364" stroke="#38BDF8" stroke-width="6" stroke-linecap="round" opacity="0.9"/>
+  <path d="M95 73L117.5 122L171 128.2L131.3 165.8L141.8 219L95 192.7L48.2 219L58.7 165.8L19 128.2L72.5 122L95 73Z" fill="url(#goldBlue)"/>
+  <path d="M75 240H188" stroke="#FACC15" stroke-width="6" stroke-linecap="round"/>
+  <path d="M75 266H208" stroke="#38BDF8" stroke-width="6" stroke-linecap="round"/>
 
-  <text x="280" y="150" fill="#F8FAFC" font-size="68" font-weight="700" font-family="Segoe UI, Arial, sans-serif">StarClans</text>
-  <text x="280" y="195" fill="#CBD5E1" font-size="28" font-weight="500" font-family="Segoe UI, Arial, sans-serif">Modern clan management for Paper and Spigot 1.21</text>
-  <text x="280" y="238" fill="#94A3B8" font-size="22" font-weight="400" font-family="Segoe UI, Arial, sans-serif">GUI-first workflows, clan economy, public profiles, leaderboards, homes, and integrations.</text>
+  <text x="96" y="148" fill="#F8FAFC" font-size="68" font-weight="700" font-family="Segoe UI, Arial, sans-serif">StarClans</text>
+  <text x="96" y="198" fill="#E2E8F0" font-size="28" font-weight="600" font-family="Segoe UI, Arial, sans-serif">Modern clan management</text>
+  <text x="96" y="236" fill="#E2E8F0" font-size="28" font-weight="600" font-family="Segoe UI, Arial, sans-serif">for Paper and Spigot 1.21</text>
+  <text x="96" y="282" fill="#94A3B8" font-size="22" font-weight="400" font-family="Segoe UI, Arial, sans-serif">GUI-first workflows, clan economy, public profiles,</text>
+  <text x="96" y="312" fill="#94A3B8" font-size="22" font-weight="400" font-family="Segoe UI, Arial, sans-serif">leaderboards, homes, and server-ready integrations.</text>
 
-  <rect x="280" y="284" width="150" height="44" rx="14" fill="url(#chip)" stroke="#243B67"/>
-  <text x="355" y="312" text-anchor="middle" fill="#F8FAFC" font-size="19" font-weight="600" font-family="Segoe UI, Arial, sans-serif">Clan Bank</text>
+  <rect x="848" y="72" width="286" height="248" rx="24" fill="url(#panel)" stroke="#28406A"/>
+  <text x="882" y="106" fill="#CBD5E1" font-size="18" font-weight="700" font-family="Segoe UI, Arial, sans-serif">Plugin Snapshot</text>
 
-  <rect x="446" y="284" width="140" height="44" rx="14" fill="url(#chip)" stroke="#243B67"/>
-  <text x="516" y="312" text-anchor="middle" fill="#F8FAFC" font-size="19" font-weight="600" font-family="Segoe UI, Arial, sans-serif">Profiles</text>
+  <rect x="882" y="122" width="188" height="38" rx="14" fill="#091427" stroke="#24406F"/>
+  <text x="976" y="146" text-anchor="middle" fill="#F8FAFC" font-size="18" font-weight="600" font-family="Segoe UI, Arial, sans-serif">Version 2.0.0</text>
 
-  <rect x="602" y="284" width="176" height="44" rx="14" fill="url(#chip)" stroke="#243B67"/>
-  <text x="690" y="312" text-anchor="middle" fill="#F8FAFC" font-size="19" font-weight="600" font-family="Segoe UI, Arial, sans-serif">Leaderboards</text>
+  <rect x="882" y="172" width="156" height="38" rx="14" fill="#091427" stroke="#24406F"/>
+  <text x="960" y="196" text-anchor="middle" fill="#F8FAFC" font-size="18" font-weight="600" font-family="Segoe UI, Arial, sans-serif">Java 21</text>
 
-  <rect x="794" y="284" width="134" height="44" rx="14" fill="url(#chip)" stroke="#243B67"/>
-  <text x="861" y="312" text-anchor="middle" fill="#F8FAFC" font-size="19" font-weight="600" font-family="Segoe UI, Arial, sans-serif">Homes</text>
+  <rect x="882" y="222" width="226" height="38" rx="14" fill="#091427" stroke="#24406F"/>
+  <text x="995" y="246" text-anchor="middle" fill="#F8FAFC" font-size="18" font-weight="600" font-family="Segoe UI, Arial, sans-serif">PlaceholderAPI + Vault</text>
 
-  <rect x="944" y="284" width="170" height="44" rx="14" fill="url(#chip)" stroke="#243B67"/>
-  <text x="1029" y="312" text-anchor="middle" fill="#F8FAFC" font-size="19" font-weight="600" font-family="Segoe UI, Arial, sans-serif">Webhooks</text>
+  <rect x="882" y="272" width="206" height="38" rx="14" fill="#091427" stroke="#24406F"/>
+  <text x="985" y="296" text-anchor="middle" fill="#F8FAFC" font-size="18" font-weight="600" font-family="Segoe UI, Arial, sans-serif">Discord Webhooks</text>
 
-  <path d="M877 105C877 96.1634 884.163 89 893 89H1066C1074.84 89 1082 96.1634 1082 105V105C1082 113.837 1074.84 121 1066 121H893C884.163 121 877 113.837 877 105V105Z" fill="#0E1A33" stroke="#29426F"/>
-  <text x="979.5" y="111" text-anchor="middle" fill="#E2E8F0" font-size="18" font-weight="600" font-family="Segoe UI, Arial, sans-serif">Version 2.0.0</text>
+  <rect x="96" y="340" width="146" height="44" rx="14" fill="url(#chip)" stroke="#243B67"/>
+  <text x="169" y="368" text-anchor="middle" fill="#F8FAFC" font-size="19" font-weight="600" font-family="Segoe UI, Arial, sans-serif">Clan Bank</text>
 
-  <path d="M878 150C878 141.163 885.163 134 894 134H1041C1049.84 134 1057 141.163 1057 150V150C1057 158.837 1049.84 166 1041 166H894C885.163 166 878 158.837 878 150V150Z" fill="#0E1A33" stroke="#29426F"/>
-  <text x="967.5" y="156" text-anchor="middle" fill="#E2E8F0" font-size="18" font-weight="600" font-family="Segoe UI, Arial, sans-serif">Java 21</text>
+  <rect x="260" y="340" width="188" height="44" rx="14" fill="url(#chip)" stroke="#243B67"/>
+  <text x="354" y="368" text-anchor="middle" fill="#F8FAFC" font-size="19" font-weight="600" font-family="Segoe UI, Arial, sans-serif">Public Profiles</text>
 
-  <path d="M877 195C877 186.163 884.163 179 893 179H1102C1110.84 179 1118 186.163 1118 195V195C1118 203.837 1110.84 211 1102 211H893C884.163 211 877 203.837 877 195V195Z" fill="#0E1A33" stroke="#29426F"/>
-  <text x="997.5" y="201" text-anchor="middle" fill="#E2E8F0" font-size="18" font-weight="600" font-family="Segoe UI, Arial, sans-serif">PlaceholderAPI + Vault</text>
-  <path d="M878 240C878 231.163 885.163 224 894 224H1079C1087.84 224 1095 231.163 1095 240V240C1095 248.837 1087.84 256 1079 256H894C885.163 256 878 248.837 878 240V240Z" fill="#0E1A33" stroke="#29426F"/>
-  <text x="986.5" y="246" text-anchor="middle" fill="#E2E8F0" font-size="18" font-weight="600" font-family="Segoe UI, Arial, sans-serif">Discord Webhooks</text>
+  <rect x="466" y="340" width="176" height="44" rx="14" fill="url(#chip)" stroke="#243B67"/>
+  <text x="554" y="368" text-anchor="middle" fill="#F8FAFC" font-size="19" font-weight="600" font-family="Segoe UI, Arial, sans-serif">Leaderboards</text>
+
+  <rect x="660" y="340" width="154" height="44" rx="14" fill="url(#chip)" stroke="#243B67"/>
+  <text x="737" y="368" text-anchor="middle" fill="#F8FAFC" font-size="19" font-weight="600" font-family="Segoe UI, Arial, sans-serif">Clan Homes</text>
 </svg>

@@ -1,6 +1,4 @@
-<p align="center">
-  <img src="assets/readme-banner.svg" alt="StarClans banner" width="100%" />
-</p>
+![StarClans banner](assets/readme-banner.png)
 
 <p align="center">
   <a href="https://hub.star-dev.xyz/starclans"><img src="https://img.shields.io/badge/Project%20Page-hub.star--dev.xyz%2Fstarclans-F59E0B?style=for-the-badge&amp;labelColor=0F172A" alt="Project page" /></a>
