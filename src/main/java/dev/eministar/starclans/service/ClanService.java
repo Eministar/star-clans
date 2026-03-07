@@ -18,6 +18,7 @@ import org.bukkit.World;
 import org.bukkit.entity.Player;
 
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -283,6 +284,11 @@ public final class ClanService {
                     player.playSound(player.getLocation(), Sound.ENTITY_PLAYER_LEVELUP, 0.9f, 1.2f);
                     doneMsg.accept(plugin.lang().get("messages.create.success", "name", n, "tag", t));
                 });
+
+                LinkedHashMap<String, String> webhook = webhookClanData(clanId);
+                webhook.put("actor", player.getName());
+                sendWebhook("create", webhook);
+                maybeCheckLeaderboardTopChange();
             } catch (Exception e) {
                 syncMsg(doneMsg, plugin.lang().get("messages.create.fail"));
                 LoggerUtil.error("Fehler bei der Clan-Erstellung für " + player.getName(), e);
@@ -466,10 +472,10 @@ public final class ClanService {
                                 "tag", inv.clanTag));
                     });
                     notifyClan(inv.clanId, plugin.lang().get("messages.broadcasts.join", "player", player.getName()), Sound.ENTITY_EXPERIENCE_ORB_PICKUP);
-                    sendWebhook("join",
-                            "Clan Join",
-                            player.getName() + " joined " + inv.clanName + " [" + inv.clanTag + "].",
-                            0x2ECC71);
+                    LinkedHashMap<String, String> webhook = webhookClanData(inv.clanId);
+                    webhook.put("actor", player.getName());
+                    sendWebhook("join", webhook);
+                    maybeCheckLeaderboardTopChange();
                     return;
                 }
 
@@ -516,10 +522,10 @@ public final class ClanService {
                         plugin.lang().get("messages.broadcasts.join", "player", targetName == null ? plugin.lang().get("messages.generic_new_member") : targetName),
                         Sound.ENTITY_EXPERIENCE_ORB_PICKUP);
                 String joinedName = targetName == null ? plugin.lang().get("messages.generic_new_member") : targetName;
-                sendWebhook("join",
-                        "Clan Join",
-                        joinedName + " joined " + pending.clanName + " [" + pending.clanTag + "] after approval.",
-                        0x2ECC71);
+                LinkedHashMap<String, String> webhook = webhookClanData(pending.clanId);
+                webhook.put("actor", joinedName);
+                sendWebhook("join", webhook);
+                maybeCheckLeaderboardTopChange();
             } catch (Exception e) {
                 syncMsg(msg, plugin.lang().get("messages.invite.accept_fail"));
                 LoggerUtil.error("Fehler beim Annehmen einer Einladung durch " + player.getName(), e);
@@ -594,10 +600,10 @@ public final class ClanService {
                     msg.accept(plugin.lang().get("messages.leave.success"));
                 });
                 notifyClan(clanId, plugin.lang().get("messages.broadcasts.leave", "player", player.getName()), Sound.ENTITY_VILLAGER_NO);
-                sendWebhook("leave",
-                        "Clan Leave",
-                        player.getName() + " left clan " + clanId + ".",
-                        0x95A5A6);
+                LinkedHashMap<String, String> webhook = webhookClanData(clanId);
+                webhook.put("actor", player.getName());
+                sendWebhook("leave", webhook);
+                maybeCheckLeaderboardTopChange();
             } catch (Exception e) {
                 syncMsg(msg, plugin.lang().get("messages.leave.fail"));
                 LoggerUtil.error("Fehler beim Verlassen des Clans durch " + player.getName(), e);
@@ -621,6 +627,8 @@ public final class ClanService {
                 }
 
                 java.util.List<ClanRepository.MemberRow> members = repo.listMembers(clanId);
+                LinkedHashMap<String, String> webhook = webhookClanData(clanId);
+                webhook.put("actor", player.getName());
                 repo.disband(clanId);
                 clearCache();
 
@@ -629,6 +637,8 @@ public final class ClanService {
                     msg.accept(plugin.lang().get("messages.disband.success"));
                 });
                 notifyMembers(members, plugin.lang().get("messages.broadcasts.disband"), Sound.ENTITY_WITHER_DEATH);
+                sendWebhook("disband", webhook);
+                maybeCheckLeaderboardTopChange();
             } catch (Exception e) {
                 syncMsg(msg, plugin.lang().get("messages.disband.fail"));
                 LoggerUtil.error("Fehler beim Auflösen des Clans durch " + player.getName(), e);
@@ -798,6 +808,10 @@ public final class ClanService {
                                 "player", name == null ? plugin.lang().get("messages.generic_member") : name,
                                 "actor", actor.getName()),
                         Sound.UI_BUTTON_CLICK);
+                LinkedHashMap<String, String> webhook = webhookClanData(clanId);
+                webhook.put("actor", actor.getName());
+                webhook.put("target", name == null ? plugin.lang().get("messages.generic_member") : name);
+                sendWebhook("promote", webhook);
             } catch (Exception e) {
                 syncMsg(msg, plugin.lang().get("messages.promote.fail"));
                 LoggerUtil.error("Fehler beim Befördern durch " + actor.getName(), e);
@@ -849,6 +863,10 @@ public final class ClanService {
                                 "player", name == null ? plugin.lang().get("messages.generic_member") : name,
                                 "actor", actor.getName()),
                         Sound.UI_BUTTON_CLICK);
+                LinkedHashMap<String, String> webhook = webhookClanData(clanId);
+                webhook.put("actor", actor.getName());
+                webhook.put("target", name == null ? plugin.lang().get("messages.generic_member") : name);
+                sendWebhook("demote", webhook);
             } catch (Exception e) {
                 syncMsg(msg, plugin.lang().get("messages.demote.fail"));
                 LoggerUtil.error("Fehler beim Degradieren durch " + actor.getName(), e);
@@ -904,12 +922,10 @@ public final class ClanService {
                 notifyClan(clanId, plugin.lang().get("messages.transfer.broadcast",
                         "player", finalTargetName,
                         "actor", actor.getName()), Sound.UI_BUTTON_CLICK);
-
-                sendWebhook("transfer",
-                        "Leader Transfer",
-                        actor.getName() + " transferred leadership to " + finalTargetName +
-                                " in clan " + clanId + ".",
-                        0xF1C40F);
+                LinkedHashMap<String, String> webhook = webhookClanData(clanId);
+                webhook.put("actor", actor.getName());
+                webhook.put("target", finalTargetName);
+                sendWebhook("transfer", webhook);
             } catch (Exception e) {
                 syncMsg(msg, plugin.lang().get("messages.transfer.fail"));
                 LoggerUtil.error("Fehler beim Übertragen der Clan-Leitung durch " + actor.getName(), e);
@@ -973,10 +989,11 @@ public final class ClanService {
                                 "actor", actor.getName()),
                         Sound.ENTITY_VILLAGER_NO);
                 String kickedName = name == null ? plugin.lang().get("messages.generic_member") : name;
-                sendWebhook("kick",
-                        "Clan Kick",
-                        actor.getName() + " kicked " + kickedName + " from clan " + clanId + ".",
-                        0xE74C3C);
+                LinkedHashMap<String, String> webhook = webhookClanData(clanId);
+                webhook.put("actor", actor.getName());
+                webhook.put("target", kickedName);
+                sendWebhook("kick", webhook);
+                maybeCheckLeaderboardTopChange();
             } catch (Exception e) {
                 syncMsg(msg, plugin.lang().get("messages.kick.fail"));
                 LoggerUtil.error("Fehler beim Kicken durch " + actor.getName(), e);
@@ -1139,6 +1156,13 @@ public final class ClanService {
                     player.playSound(player.getLocation(), Sound.ENTITY_PLAYER_LEVELUP, 0.5f, 1.5f);
                     msg.accept(plugin.lang().get("messages.bank.deposit_success", "amount", money(amount)));
                 });
+                LinkedHashMap<String, String> webhook = webhookClanData(p.clanId);
+                webhook.put("actor", player.getName());
+                putAmountVars(webhook, "amount", amount);
+                putAmountVars(webhook, "balance_before", p.balance);
+                putAmountVars(webhook, "balance_after", p.balance + amount);
+                sendWebhook("bank_deposit", webhook);
+                maybeCheckLeaderboardTopChange();
 
             } catch (Exception e) {
                 syncMsg(msg, plugin.lang().get("messages.bank.fail"));
@@ -1191,6 +1215,13 @@ public final class ClanService {
                     player.playSound(player.getLocation(), Sound.BLOCK_NOTE_BLOCK_XYLOPHONE, 0.5f, 1.2f);
                     msg.accept(plugin.lang().get("messages.bank.withdraw_success", "amount", money(amount)));
                 });
+                LinkedHashMap<String, String> webhook = webhookClanData(p.clanId);
+                webhook.put("actor", player.getName());
+                putAmountVars(webhook, "amount", amount);
+                putAmountVars(webhook, "balance_before", p.balance);
+                putAmountVars(webhook, "balance_after", p.balance - amount);
+                sendWebhook("bank_withdraw", webhook);
+                maybeCheckLeaderboardTopChange();
 
             } catch (Exception e) {
                 syncMsg(msg, plugin.lang().get("messages.bank.fail"));
@@ -1204,6 +1235,14 @@ public final class ClanService {
         Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
             try {
                 recordBankTransaction(clanId, playerUuid, playerName, BankTransactionType.TAX, amount, balanceAfter, "");
+                LinkedHashMap<String, String> webhook = webhookClanData(clanId);
+                webhook.put("actor", playerName == null ? plugin.lang().get("messages.generic_player") : playerName);
+                putAmountVars(webhook, "amount", amount);
+                putAmountVars(webhook, "balance_before", Math.max(0.0, balanceAfter - amount));
+                putAmountVars(webhook, "balance_after", balanceAfter);
+                putRateVars(webhook, "new_rate", repo.getSettings(clanId).taxRate);
+                sendWebhook("tax_collected", webhook);
+                maybeCheckLeaderboardTopChange();
             } catch (Exception e) {
                 LoggerUtil.error("Fehler beim Speichern der Clan-Bank-Historie für Tax-Event.", e);
             }
@@ -1244,6 +1283,11 @@ public final class ClanService {
                     player.playSound(player.getLocation(), Sound.BLOCK_BEACON_ACTIVATE, 0.7f, 1.5f);
                     msg.accept(plugin.lang().get("messages.home.set_success"));
                 });
+                LinkedHashMap<String, String> webhook = webhookClanData(p.clanId);
+                webhook.put("actor", player.getName());
+                webhook.put("world", loc.getWorld() == null ? "" : loc.getWorld().getName());
+                webhook.put("position", "x=" + (int) Math.floor(loc.getX()) + ", y=" + (int) Math.floor(loc.getY()) + ", z=" + (int) Math.floor(loc.getZ()));
+                sendWebhook("home_set", webhook);
 
             } catch (Exception e) {
                 syncMsg(msg, plugin.lang().get("messages.home.set_fail"));
@@ -1328,6 +1372,11 @@ public final class ClanService {
                     player.playSound(player.getLocation(), Sound.BLOCK_ANVIL_USE, 0.5f, 1.2f);
                     msg.accept(plugin.lang().get("messages.tax.set_success", "rate", Double.valueOf(rate)));
                 });
+                LinkedHashMap<String, String> webhook = webhookClanData(p.clanId);
+                webhook.put("actor", player.getName());
+                putRateVars(webhook, "old_rate", p.taxRate);
+                putRateVars(webhook, "new_rate", rate);
+                sendWebhook("tax_changed", webhook);
 
             } catch (Exception e) {
                 syncMsg(msg, plugin.lang().get("messages.tax.fail"));
@@ -1371,9 +1420,69 @@ public final class ClanService {
         cooldowns.put(uuid, Long.valueOf(System.currentTimeMillis() + (seconds * 1000L)));
     }
 
-    private void sendWebhook(String eventKey, String title, String description, int color) {
+    private void sendWebhook(String eventKey, Map<String, String> values) {
         if (plugin.discord() == null) return;
-        plugin.discord().sendEvent(eventKey, title, description, color);
+        plugin.discord().sendEvent(eventKey, values);
+    }
+
+    private LinkedHashMap<String, String> webhookClanData(long clanId) throws Exception {
+        LinkedHashMap<String, String> vars = new LinkedHashMap<>();
+        vars.put("clan_id", String.valueOf(clanId));
+
+        ClanRepository.ClanPublicProfileRow row = repo.getClanPublicProfile(clanId);
+        if (row != null) {
+            vars.put("clan_name", row.name);
+            vars.put("clan_tag", row.tag);
+            vars.put("member_count", String.valueOf(row.memberCount));
+            vars.put("clan_balance", money(row.balance));
+            vars.put("clan_balance_raw", rawNumber(row.balance));
+            vars.put("tax_rate", formatRate(row.taxRate));
+            vars.put("tax_rate_raw", rawNumber(row.taxRate));
+            vars.put("leader_name", row.leaderName == null ? "" : row.leaderName);
+            return vars;
+        }
+
+        ClanRepository.ClanLookupRow lookup = repo.getClanLookup(clanId);
+        vars.put("clan_name", lookup == null ? "" : lookup.clanName);
+        vars.put("clan_tag", lookup == null ? "" : lookup.clanTag);
+        vars.put("member_count", String.valueOf(repo.countMembers(clanId)));
+        double balance = repo.getClanBalance(clanId);
+        vars.put("clan_balance", money(balance));
+        vars.put("clan_balance_raw", rawNumber(balance));
+        vars.put("tax_rate", formatRate(0.0));
+        vars.put("tax_rate_raw", rawNumber(0.0));
+        vars.put("leader_name", "");
+        return vars;
+    }
+
+    private void putAmountVars(Map<String, String> vars, String key, double amount) {
+        vars.put(key, money(amount));
+        vars.put(key + "_raw", rawNumber(amount));
+    }
+
+    private void putRateVars(Map<String, String> vars, String key, double rate) {
+        vars.put(key, formatRate(rate));
+        vars.put(key + "_raw", rawNumber(rate));
+    }
+
+    private String rawNumber(double value) {
+        return String.format(Locale.US, "%.2f", Double.valueOf(value));
+    }
+
+    private String formatRate(double value) {
+        String out = rawNumber(value);
+        while (out.endsWith("0")) {
+            out = out.substring(0, out.length() - 1);
+        }
+        if (out.endsWith(".")) {
+            out = out.substring(0, out.length() - 1);
+        }
+        return out + "%";
+    }
+
+    private void maybeCheckLeaderboardTopChange() {
+        if (plugin.discord() == null) return;
+        plugin.discord().handlePotentialTopChangeAsync();
     }
 
     private void recordBankTransaction(long clanId, UUID actorUuid, String actorName, BankTransactionType type,

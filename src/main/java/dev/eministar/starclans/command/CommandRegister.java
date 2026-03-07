@@ -33,7 +33,7 @@ public final class CommandRegister {
         PluginCommand starclans = plugin.getCommand("starclans");
         if (starclans != null) {
             starclans.setExecutor(new StarClansCommand(plugin, service));
-            starclans.setTabCompleter(new StarClansTabCompleter());
+            starclans.setTabCompleter(new StarClansTabCompleter(plugin));
         }
     }
 

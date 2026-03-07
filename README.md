@@ -27,7 +27,7 @@
 
 ## Overview
 
-StarClans is a modern clan plugin for Paper and Spigot `1.21` that puts the whole clan lifecycle into polished GUIs and clean command flows. It covers clan creation, invites, member management, clan chat, public profiles, leaderboards, clan homes, a shared bank, tax handling, PlaceholderAPI output, and Discord webhook notifications.
+StarClans is a modern clan plugin for Paper and Spigot `1.21` that puts the whole clan lifecycle into polished GUIs and clean command flows. It covers clan creation, invites, member management, clan chat, public profiles, leaderboards, clan homes, a shared bank, tax handling, PlaceholderAPI output, and cinematic Discord webhook feeds.
 
 It is built for servers that want clan systems to feel like a real feature set instead of a pile of single-purpose commands.
 
@@ -42,7 +42,7 @@ Version `2.0.0` adds the systems that were still missing from the old README:
 | Public profiles | Openable clan profile pages with recruiting flow and optional leaderboard entry points |
 | Leaderboards | GUI leaderboard with sorting by balance or member count |
 | Clan home | `/clan home` and `/clan sethome` with configurable costs and role requirements |
-| Integrations | Discord webhook events, Vault economy support, language files, and admin reload flow |
+| Integrations | Multi-channel Discord webhook embeds, Vault economy support, language files, and admin tooling for reload, test sends, and digests |
 
 ## Feature Stack
 
@@ -53,7 +53,7 @@ Version `2.0.0` adds the systems that were still missing from the old README:
 | Communication | Clan chat toggle and public profile based recruiting |
 | Economy | Clan bank, tax handling, balance tracking, quick-amount actions, and transaction history |
 | Progression | Leaderboards, public profiles, and role-based access control for critical actions |
-| Infrastructure | MySQL / MariaDB persistence through HikariCP, reload support, logging, and update checks |
+| Infrastructure | MySQL / MariaDB persistence through HikariCP, reload support, logging, update checks, and scheduled Discord digest delivery |
 
 ## Requirements
 
@@ -85,7 +85,7 @@ Optional integrations:
 
 - PlaceholderAPI enables `%starclans_*%` placeholders.
 - Vault enables economy formatting plus clan bank deposit and withdraw flows.
-- Discord webhooks can mirror clan events into a Discord channel.
+- Discord webhooks can mirror clan events into multiple channels with configurable embeds, audit events, test sends, and a daily leaderboard digest.
 
 ## Commands
 
@@ -145,6 +145,8 @@ Optional integrations:
 | `/starclans help` | Show admin help |
 | `/starclans version` | Show the installed plugin version |
 | `/starclans reload` | Reload config, language, Vault hook, and database setup |
+| `/starclans webhook test [event]` | Send a preview embed for the webhook system |
+| `/starclans webhook digest` | Force the daily leaderboard digest immediately |
 
 Aliases:
 
@@ -159,6 +161,7 @@ Aliases:
 | Permission | Description | Default |
 | --- | --- | --- |
 | `starclans.admin.reload` | Allows `/starclans reload` | `op` |
+| `starclans.admin.webhook` | Allows webhook test and digest commands | `op` |
 
 ## Placeholders
 
@@ -196,7 +199,7 @@ The most important config sections at a glance:
 | `clan.profile` | Public profile visibility, recruiting, officer preview, and date format |
 | `clan.tax` | Tax notification behavior |
 | `leaderboard` | Amount of clans shown in the leaderboard GUI |
-| `discord.webhook` | Webhook URL, avatar, role mention, timeout, and event toggles |
+| `discord.webhook` | Channel routing, embed templates, retry policy, mention rules, digest schedule, and event-specific webhook configuration |
 | `lang` | Selected language file |
 
 Example excerpt:

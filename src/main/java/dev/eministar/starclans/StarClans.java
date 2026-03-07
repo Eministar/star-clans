@@ -102,6 +102,10 @@ public final class StarClans extends JavaPlugin {
                 tagStyleMenu, settingsMenu, bankMenu, leaderboardMenu, profileMenu
         );
 
+        if (discord != null) {
+            discord.reload();
+        }
+
         if (Bukkit.getPluginManager().getPlugin("PlaceholderAPI") != null) {
             new StarClansExpansion(this, service, repo).register();
             LoggerUtil.success("PlaceholderAPI Erweiterung wurde erfolgreich registriert.");
@@ -115,6 +119,9 @@ public final class StarClans extends JavaPlugin {
 
     @Override
     public void onDisable() {
+        if (discord != null) {
+            discord.shutdown();
+        }
         HikariProvider.shutdown();
         LoggerUtil.info("StarClans wurde deaktiviert.");
     }

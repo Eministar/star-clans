@@ -147,26 +147,357 @@ leaderboard:
 # Discord-Integration über Webhooks.
 discord:
   webhook:
-    # Ob die Discord-Integration aktiviert ist.
     enabled: false
-    # Die Webhook-URL von deinem Discord-Server.
-    url: ""
-    # Der Name, unter dem der Webhook postet.
-    username: "StarClans Notifications"
-    # Die URL zum Avatar des Webhooks.
-    avatarUrl: ""
-    # Die ID einer Rolle, die bei wichtigen Events erwähnt werden soll.
-    mentionRoleId: ""
-    # Timeout für Webhook-Anfragen (in Millisekunden).
-    timeoutMs: 5000
-    
-    # Welche Events sollen im Discord geloggt werden?
+    defaults:
+      serverName: "StarClans Server"
+      username: "StarClans"
+      avatarUrl: ""
+      footerText: "StarClans • {server}"
+      footerIconUrl: ""
+      mentionRoleId: ""
+      allowedMentions:
+        roles: true
+        users: false
+        everyone: false
+      timeoutMs: 5000
+      retry:
+        attempts: 3
+        delayMs: 1500
+
+    # Leer lassen, um den Default-Webhook weiterzuverwenden.
+    channels:
+      default:
+        enabled: true
+        url: ""
+        username: "StarClans"
+        avatarUrl: ""
+        mentionRoleId: ""
+      news:
+        enabled: true
+        url: ""
+        username: "StarClans News"
+        avatarUrl: ""
+        mentionRoleId: ""
+      audit:
+        enabled: true
+        url: ""
+        username: "StarClans Audit"
+        avatarUrl: ""
+        mentionRoleId: ""
+      economy:
+        enabled: true
+        url: ""
+        username: "StarClans Economy"
+        avatarUrl: ""
+        mentionRoleId: ""
+      leaderboard:
+        enabled: true
+        url: ""
+        username: "StarClans Leaderboard"
+        avatarUrl: ""
+        mentionRoleId: ""
+
+    digest:
+      enabled: true
+      hour: 19
+      minute: 0
+      timezone: "Europe/Berlin"
+      top: 5
+      sortBy: "balance"
+      announceTop1Changes: true
+      topChangeCooldownSeconds: 15
+
     events:
-      join: true
-      leave: true
-      kick: true
-      transfer: true
-      war: true
+      test:
+        enabled: true
+        channel: "default"
+        title: "StarClans webhook test"
+        description: "Webhook delivery is active for **{server}**."
+        color: "#38BDF8"
+        includeTimestamp: true
+        fields:
+          - name: "Channel"
+            value: "{channel}"
+            inline: true
+          - name: "Clan"
+            value: "{clan_name} [`{clan_tag}`]"
+            inline: true
+          - name: "Actor"
+            value: "{actor}"
+            inline: true
+
+      create:
+        enabled: true
+        channel: "news"
+        title: "A new clan rises"
+        description: "**{actor}** founded **{clan_name}** [`{clan_tag}`]."
+        color: "#FACC15"
+        includeTimestamp: true
+        fields:
+          - name: "Clan"
+            value: "{clan_name} [`{clan_tag}`]"
+            inline: true
+          - name: "Leader"
+            value: "{actor}"
+            inline: true
+          - name: "Members"
+            value: "{member_count}"
+            inline: true
+
+      disband:
+        enabled: true
+        channel: "news"
+        title: "A clan has fallen"
+        description: "**{actor}** disbanded **{clan_name}** [`{clan_tag}`]."
+        color: "#EF4444"
+        includeTimestamp: true
+        fields:
+          - name: "Clan"
+            value: "{clan_name} [`{clan_tag}`]"
+            inline: true
+          - name: "Final Balance"
+            value: "{clan_balance}"
+            inline: true
+          - name: "Members"
+            value: "{member_count}"
+            inline: true
+
+      join:
+        enabled: true
+        channel: "news"
+        title: "Clan member joined"
+        description: "**{actor}** joined **{clan_name}** [`{clan_tag}`]."
+        color: "#22C55E"
+        includeTimestamp: true
+        fields:
+          - name: "Player"
+            value: "{actor}"
+            inline: true
+          - name: "Clan"
+            value: "{clan_name} [`{clan_tag}`]"
+            inline: true
+          - name: "Members"
+            value: "{member_count}"
+            inline: true
+
+      leave:
+        enabled: true
+        channel: "news"
+        title: "Clan member left"
+        description: "**{actor}** left **{clan_name}** [`{clan_tag}`]."
+        color: "#94A3B8"
+        includeTimestamp: true
+        fields:
+          - name: "Player"
+            value: "{actor}"
+            inline: true
+          - name: "Clan"
+            value: "{clan_name} [`{clan_tag}`]"
+            inline: true
+          - name: "Members"
+            value: "{member_count}"
+            inline: true
+
+      kick:
+        enabled: true
+        channel: "audit"
+        title: "Clan member removed"
+        description: "**{actor}** removed **{target}** from **{clan_name}** [`{clan_tag}`]."
+        color: "#F97316"
+        includeTimestamp: true
+        fields:
+          - name: "Actor"
+            value: "{actor}"
+            inline: true
+          - name: "Target"
+            value: "{target}"
+            inline: true
+          - name: "Clan"
+            value: "{clan_name} [`{clan_tag}`]"
+            inline: true
+
+      transfer:
+        enabled: true
+        channel: "news"
+        title: "Leadership transferred"
+        description: "**{actor}** handed leadership of **{clan_name}** to **{target}**."
+        color: "#EAB308"
+        includeTimestamp: true
+        fields:
+          - name: "Previous Leader"
+            value: "{actor}"
+            inline: true
+          - name: "New Leader"
+            value: "{target}"
+            inline: true
+          - name: "Clan"
+            value: "{clan_name} [`{clan_tag}`]"
+            inline: true
+
+      promote:
+        enabled: true
+        channel: "audit"
+        title: "Member promoted"
+        description: "**{actor}** promoted **{target}** in **{clan_name}** [`{clan_tag}`]."
+        color: "#38BDF8"
+        includeTimestamp: true
+        fields:
+          - name: "Actor"
+            value: "{actor}"
+            inline: true
+          - name: "Promoted"
+            value: "{target}"
+            inline: true
+          - name: "Clan"
+            value: "{clan_name} [`{clan_tag}`]"
+            inline: true
+
+      demote:
+        enabled: true
+        channel: "audit"
+        title: "Member demoted"
+        description: "**{actor}** demoted **{target}** in **{clan_name}** [`{clan_tag}`]."
+        color: "#A78BFA"
+        includeTimestamp: true
+        fields:
+          - name: "Actor"
+            value: "{actor}"
+            inline: true
+          - name: "Demoted"
+            value: "{target}"
+            inline: true
+          - name: "Clan"
+            value: "{clan_name} [`{clan_tag}`]"
+            inline: true
+
+      bank_deposit:
+        enabled: true
+        channel: "economy"
+        title: "Clan bank deposit"
+        description: "**{actor}** deposited **{amount}** into **{clan_name}** [`{clan_tag}`]."
+        color: "#22C55E"
+        includeTimestamp: true
+        minAmount: 0.0
+        fields:
+          - name: "Amount"
+            value: "{amount}"
+            inline: true
+          - name: "Before"
+            value: "{balance_before}"
+            inline: true
+          - name: "After"
+            value: "{balance_after}"
+            inline: true
+
+      bank_withdraw:
+        enabled: true
+        channel: "economy"
+        title: "Clan bank withdrawal"
+        description: "**{actor}** withdrew **{amount}** from **{clan_name}** [`{clan_tag}`]."
+        color: "#EF4444"
+        includeTimestamp: true
+        minAmount: 0.0
+        fields:
+          - name: "Amount"
+            value: "{amount}"
+            inline: true
+          - name: "Before"
+            value: "{balance_before}"
+            inline: true
+          - name: "After"
+            value: "{balance_after}"
+            inline: true
+
+      tax_collected:
+        enabled: true
+        channel: "economy"
+        title: "Clan tax collected"
+        description: "**{actor}** paid **{amount}** clan tax to **{clan_name}** [`{clan_tag}`]."
+        color: "#F59E0B"
+        includeTimestamp: true
+        minAmount: 0.0
+        fields:
+          - name: "Tax Rate"
+            value: "{new_rate}"
+            inline: true
+          - name: "Amount"
+            value: "{amount}"
+            inline: true
+          - name: "Clan Balance"
+            value: "{balance_after}"
+            inline: true
+
+      tax_changed:
+        enabled: true
+        channel: "economy"
+        title: "Clan tax updated"
+        description: "**{actor}** changed the tax rate for **{clan_name}** [`{clan_tag}`]."
+        color: "#F97316"
+        includeTimestamp: true
+        fields:
+          - name: "Previous"
+            value: "{old_rate}"
+            inline: true
+          - name: "New"
+            value: "{new_rate}"
+            inline: true
+          - name: "Clan"
+            value: "{clan_name} [`{clan_tag}`]"
+            inline: true
+
+      home_set:
+        enabled: true
+        channel: "audit"
+        title: "Clan home updated"
+        description: "**{actor}** moved the home of **{clan_name}** [`{clan_tag}`]."
+        color: "#06B6D4"
+        includeTimestamp: true
+        fields:
+          - name: "World"
+            value: "{world}"
+            inline: true
+          - name: "Position"
+            value: "{position}"
+            inline: false
+          - name: "Clan"
+            value: "{clan_name} [`{clan_tag}`]"
+            inline: true
+
+      daily_leaderboard_digest:
+        enabled: true
+        channel: "leaderboard"
+        title: "Daily clan leaderboard"
+        description: "{leaderboard_lines}"
+        color: "#38BDF8"
+        includeTimestamp: true
+        fields:
+          - name: "Sort By"
+            value: "{sort_label}"
+            inline: true
+          - name: "Entries"
+            value: "{top_count}"
+            inline: true
+          - name: "Top Clan"
+            value: "{top_clan_name} [`{top_clan_tag}`]"
+            inline: true
+
+      leaderboard_top_changed:
+        enabled: true
+        channel: "leaderboard"
+        title: "A new #1 clan has taken the lead"
+        description: "**{new_top_name}** [`{new_top_tag}`] overtook **{old_top_name}** [`{old_top_tag}`] in the **{sort_label}** ranking."
+        color: "#E11D48"
+        includeTimestamp: true
+        fields:
+          - name: "Previous #1"
+            value: "{old_top_name} [`{old_top_tag}`]"
+            inline: true
+          - name: "New #1"
+            value: "{new_top_name} [`{new_top_tag}`]"
+            inline: true
+          - name: "Metric"
+            value: "{sort_label}"
+            inline: true
 
 # Sprach-Einstellungen.
 lang:

@@ -88,6 +88,22 @@ messages:
         - "&8&m----------------------------------------"
         - "&8• &f/starclans reload &7- Lädt das Plugin neu"
         - "&8• &f/starclans version &7- Zeigt die Version an"
+        - "&8• &f/starclans webhook test [event] &7- Sendet einen Beispiel-Webhook"
+        - "&8• &f/starclans webhook digest &7- Erzwingt den Daily-Digest"
+        - "&8&m----------------------------------------"
+
+  webhook:
+    test_sent: "Webhook-Test für &f{event} &7wurde ausgelöst."
+    test_failed: "Webhook-Test konnte nicht ausgelöst werden. Prüfe Config, Event-Key und Webhook-URL."
+    digest_sent: "Daily-Leaderboard-Digest wurde ausgelöst."
+    digest_failed: "Daily-Leaderboard-Digest konnte nicht ausgelöst werden. Prüfe Config und Webhook-Setup."
+    help:
+      title: "&8[&x&F&F&A&A&0&0&lS&x&F&F&B&B&3&3&lt&x&F&F&C&C&6&6&la&x&F&F&D&D&9&9&lr&x&F&F&E&E&C&C&lC&x&F&F&F&F&F&F&ll&x&E&E&F&F&E&E&la&x&C&C&F&F&C&C&ln&x&A&A&F&F&A&A&ls&8] &8» &fWebhook Hilfe"
+      lines:
+        - "&8&m----------------------------------------"
+        - "&8• &f/starclans webhook test &7- Sendet das Standard-Testevent"
+        - "&8• &f/starclans webhook test <event> &7- Sendet ein bestimmtes Beispiel-Event"
+        - "&8• &f/starclans webhook digest &7- Erzwingt den aktuellen Leaderboard-Digest"
         - "&8&m----------------------------------------"
 
   # Clan-Erstellung

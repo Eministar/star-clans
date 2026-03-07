@@ -14,9 +14,11 @@ commands:
     aliases: [ clans ]
   starclans:
     description: StarClans admin command
-    usage: /starclans reload
+    usage: /starclans <reload|version|webhook>
     aliases: [ sc ]
 
 permissions:
   starclans.admin.reload:
+    default: op
+  starclans.admin.webhook:
     default: op

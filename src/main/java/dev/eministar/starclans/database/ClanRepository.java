@@ -159,7 +159,7 @@ public final class ClanRepository {
 
     private static final Pattern SAFE = Pattern.compile("^[A-Za-z0-9_]+$");
 
-    private final DataSource ds;
+    private final DataSource fallbackDs;
 
     private volatile boolean resolved;
     private final Object lock = new Object();
@@ -209,11 +209,16 @@ public final class ClanRepository {
 
     public ClanRepository(DataSource ds) {
         if (ds == null) throw new IllegalStateException("DataSource is null");
-        this.ds = ds;
+        this.fallbackDs = ds;
     }
 
     private Connection c() throws Exception {
-        return ds.getConnection();
+        DataSource current = HikariProvider.get();
+        DataSource active = current != null ? current : fallbackDs;
+        if (active == null) {
+            throw new IllegalStateException("DataSource is null");
+        }
+        return active.getConnection();
     }
 
     private void ensureResolved() throws Exception {
