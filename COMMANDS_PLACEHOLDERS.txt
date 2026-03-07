@@ -144,7 +144,7 @@ Identifier: starclans
   - Wie %starclans_suffix%, aber mit führendem Leerzeichen, falls nicht leer
 
 
-Features (Neu in v1.2.0)
+Features (Neu in v2.0.0)
 ------------------------
 1. Clan-Ökonomie (Vault-Integration)
    - Gemeinsames Bankkonto für jeden Clan.
